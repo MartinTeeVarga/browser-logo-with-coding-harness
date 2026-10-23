@@ -13,13 +13,13 @@ function context() {
     set: (target, key, value) => { target[key] = value; return true; }
   });
 }
-function session({slow = true, afterFrame = () => {}, instructionLimit} = {}) {
+function session({slow = true, afterFrame = () => {}, speed = 'slow', instructionLimit} = {}) {
   const turtle = new CanvasTurtle(context(), context(), 1000, 1000);
   const logo = createInterpreter(turtle, {write() {}, read: async () => ''});
   const lines = [], frames = [], delays = [];
-  const mode = {enabled: slow};
+  const mode = {enabled: slow, speed};
   const pacing = createSlowExecution({
-    turtle, instructionLimit, enabled: () => mode.enabled,
+    turtle, instructionLimit, enabled: () => mode.enabled, speed: () => mode.speed,
     wait: async ms => { delays.push(ms); },
     frame: async () => { frames.push({pos: turtle.position.slice(), heading: turtle.heading, color: turtle.color}); afterFrame(mode, frames.length); },
     step: info => lines.push(info.line)
@@ -73,4 +73,35 @@ test('the corrected goulash executes in slow mode with valid line locations', as
   assert.ok(state.lines.length > 1000);
   assert.ok(state.lines.every(line => line > 0 && line <= source.split('\n').length));
   assert.ok(state.frames.every(frame => frame.pos.every(Number.isFinite)));
+});
+
+
+test('Fast preserves the animation path with ten times shorter pacing delays', async () => {
+  const slow = session(), fast = session({speed: 'fast'});
+  const source = 'fd 24 rt 15 setxy 20 30 setheading 90 setpc 4';
+  await slow.logo.run(source); await fast.logo.run(source);
+  assert.deepEqual(fast.frames, slow.frames);
+  assert.deepEqual(fast.delays, slow.delays.map(ms => ms / 10));
+  assert.ok(slow.delays.includes(90)); assert.ok(slow.delays.includes(20));
+});
+
+test('speed can change to Fast within an animated movement', async () => {
+  const state = session({afterFrame: mode => {mode.speed='fast';}});
+  await state.logo.run('fd 24');
+  assert.deepEqual(state.delays, [90, 2, 2, 2]);
+});
+
+test('animated pen uses the turtle silhouette even with triangle shape and hidden turtle', () => {
+  const calls = [];
+  const cursor = context();
+  cursor.ellipse = (...shape) => calls.push(shape);
+  cursor.stroke = () => calls.push(cursor.strokeStyle);
+  const turtle = new CanvasTurtle(context(), cursor, 1000, 1000);
+  turtle.visible=false; turtle.showExecutionCursor=true; turtle.color='red';
+  turtle.render();
+  assert.ok(calls.some(point => Array.isArray(point) && point[0]===32 && point[1]===33 && point[2]===13 && point[3]===16));
+  assert.ok(calls.includes('red'));
+  assert.equal(turtle.visible, false); assert.equal(turtle.shape, 'triangle');
+  calls.length=0; turtle.color='blue'; turtle.render();
+  assert.ok(calls.includes('blue'));
 });

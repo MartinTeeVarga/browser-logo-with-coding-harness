@@ -1,19 +1,20 @@
 // Slow execution changes presentation and pacing; primitive calls still go
 // through the interpreter and use the same language semantics.
-export function createSlowExecution({ turtle, enabled, wait, frame, step, instructionLimit = 20000 }) {
+export function createSlowExecution({ turtle, enabled, speed = () => 'slow', wait, frame, step, instructionLimit = 20000 }) {
   let count = 0;
   const numeric = value => (typeof value === 'number' || typeof value === 'string' && /^-?([0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)$/.test(value)) && Number.isFinite(Number(value)) ? Number(value) : null;
   const forward = new Set(['FORWARD', 'FD', 'BACK', 'BK']);
   const turns = new Set(['RIGHT', 'RT', 'LEFT', 'LT']);
   const positions = new Set(['SETPOS', 'SETXY', 'SETX', 'SETY']);
   const appearance = new Set(['SETPENCOLOR', 'SETPC', 'SETCOLOR', 'SETBACKGROUND', 'SETBG', 'SETSC', 'SETSCREENCOLOR', 'PENDOWN', 'PD', 'PENUP', 'PU', 'SETPENSIZE', 'SETWIDTH', 'SETPW', 'SHOWTURTLE', 'ST', 'HIDETURTLE', 'HT', 'SETSHAPE']);
-  async function tick() { await frame(); await wait(20); }
+  const delay = ms => wait(ms / (speed() === 'fast' ? 10 : 1));
+  async function tick() { await frame(); await delay(20); }
   return {
     async onInstruction(info) {
       if (!enabled()) return;
       if (++count > instructionLimit) throw new Error('Slow mode reached its instruction limit. Use a bounded loop or run without Slow mode.');
       step(info);
-      await wait(90);
+      await delay(90);
     },
     async primitiveExecutor(name, args, invoke) {
       if (!enabled()) return invoke();

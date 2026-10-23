@@ -76,7 +76,12 @@ let revision = 0, drawingWorker = null, running = false, watchdog, chatting = fa
 const history = [];
 const runtimeRepairBudget = new RuntimeRepairBudget();
 let pendingRunFailure = null, repairingRun = false, activeRun = null, activeLine = null;
-$('slow-mode').checked = stored('logo.slow.v1', 'false') === 'true';
+const savedSpeed = stored('logo.speed.v1', stored('logo.slow.v1', 'false') === 'true' ? '0' : '2');
+$('speed').value = ['0', '1', '2'].includes(savedSpeed) ? savedSpeed : '2';
+const drawingSpeed = () => ['slow', 'fast', 'instant'][Number($('speed').value)];
+const isAnimated = () => drawingSpeed() !== 'instant';
+function describeSpeed() { $('speed').setAttribute('aria-valuetext', ['Slow', 'Fast', 'Instant'][Number($('speed').value)]); }
+describeSpeed();
 function clearExecutionLine() {
   if (activeLine !== null) editor.removeLineClass(activeLine, 'background', 'logo-current-line');
   activeLine = null;
@@ -88,11 +93,11 @@ function showExecutionLine(line, snapshot) {
   editor.addLineClass(activeLine, 'background', 'logo-current-line');
   editor.scrollIntoView({line: activeLine, ch: 0}, 70);
 }
-$('slow-mode').addEventListener('change', () => {
-  const enabled = $('slow-mode').checked;
-  save('logo.slow.v1', String(enabled));
-  if (enabled) setCollapsed(false); else clearExecutionLine();
-  drawingWorker?.postMessage({type: 'slow', enabled});
+$('speed').addEventListener('input', () => {
+  save('logo.speed.v1', $('speed').value);
+  describeSpeed();
+  if (isAnimated()) setCollapsed(false); else clearExecutionLine();
+  drawingWorker?.postMessage({type: 'speed', speed: drawingSpeed()});
 });
 const readEditor = () => ({ source: editor.getValue(), revision });
 function commitSource(source, origin = 'ai') {
@@ -220,6 +225,7 @@ function finishRun(message, error = false) {
   drawingWorker?.terminate(); drawingWorker = null; running = false;
   activeRun = null;
   $('run').querySelector('span').textContent = 'Run';
+  $('run').querySelector('path').setAttribute('d', 'M2 1.5 11 7l-9 5.5z');
   $('run').setAttribute('aria-label', 'Run Logo code');
   $('program-input').hidden = true;
   status(message, error);
@@ -240,9 +246,10 @@ async function run() {
   const source = snapshot.source;
   activeRun = snapshot;
   clearExecutionLine();
-  if ($('slow-mode').checked) setCollapsed(false);
+  if (isAnimated()) setCollapsed(false);
   running = true;
   $('run').querySelector('span').textContent = 'Stop';
+  $('run').querySelector('path').setAttribute('d', 'M2 2h10v10H2z');
   $('run').setAttribute('aria-label', 'Stop running Logo code');
   status('Drawing…');
   $('output').textContent = ''; $('output').hidden = true;
@@ -258,7 +265,7 @@ async function run() {
         context.clearRect(0, 0, 1000, 1000); context.drawImage(bitmap, 0, 0); bitmap.close();
       }
     } else if (data.type === 'step') {
-      if ($('slow-mode').checked) {
+      if (isAnimated()) {
         showExecutionLine(data.line, snapshot);
         armWatchdog(snapshot);
       }
@@ -278,7 +285,7 @@ async function run() {
     }
   };
   worker.onerror = () => finishRun('The drawing worker could not start. Refresh the page and try again.', true);
-  worker.postMessage({ type: 'run', source, slow: $('slow-mode').checked });
+  worker.postMessage({ type: 'run', source, speed: drawingSpeed() });
 }
 $('run').addEventListener('click', run);
 $('program-input').addEventListener('submit', event => {

@@ -13,9 +13,9 @@ async function app(t, generate = async () => logoReply('fd 20')) {
     constructor() { this.value = ''; this.textContent = ''; this.style = {}; this.hidden = false; this.children = []; this.listeners = {}; this.classes = new Set(); this.classList = {toggle:(name,on)=>on?this.classes.add(name):this.classes.delete(name),add:name=>this.classes.add(name),remove:name=>this.classes.delete(name)}; }
     addEventListener(name, fn) { this.listeners[name] = fn; }
     emit(name, data = {}) { return this.listeners[name]?.({preventDefault() {}, ...data}); }
-    setAttribute() {} focus() {} remove() { this.removed = true; }
+    setAttribute(name, value) { (this.attributes ||= {})[name] = value; } focus() {} remove() { this.removed = true; }
     append(node) { this.children.push(node); }
-    querySelector() { return this.span ||= new Element(); }
+    querySelector(selector) { return (this.selected ||= {})[selector] ||= new Element(); }
   }
   const nodes = new Map();
   const get = id => { if (!nodes.has(id)) nodes.set(id, new Element()); return nodes.get(id); };
@@ -88,18 +88,22 @@ test('an error from an older Run never overwrites user edits', async t => {
   assert.equal(state.source(),'fd 77'); assert.equal(state.requests.length,0);
 });
 
-test('Slow switch sends its state, highlights the active line, and autoscrolls', async t => {
+test('speed slider sends its state, highlights the active line, and autoscrolls', async t => {
   const state = await app(t);
-  state.get('slow-mode').checked=true;
-  state.get('slow-mode').emit('change');
+  state.get('speed').value='0';
+  state.get('speed').emit('input');
   await state.get('run').emit('click');
-  assert.equal(state.drawing().messages[0].slow,true);
+  assert.equal(state.drawing().messages[0].speed,'slow');
+  assert.equal(state.get('run').querySelector('path').attributes.d, 'M2 2h10v10H2z');
+  state.get('speed').value='1';state.get('speed').emit('input');
+  assert.equal(state.drawing().messages.at(-1).speed,'fast');
   state.drawing().emit({type:'step',line:2});
   assert.equal(state.marked(),1); assert.equal(state.scrolled(),1);
-  state.get('slow-mode').checked=false;state.get('slow-mode').emit('change');
+  state.get('speed').value='2';state.get('speed').emit('input');
   assert.equal(state.marked(),null);
-  assert.equal(state.drawing().messages.at(-1).enabled,false);
+  assert.equal(state.drawing().messages.at(-1).speed,'instant');
   await state.get('run').emit('click'); // Stop never starts an AI repair.
+  assert.equal(state.get('run').querySelector('path').attributes.d, 'M2 1.5 11 7l-9 5.5z');
   assert.equal(state.requests.length,0);
 });
 

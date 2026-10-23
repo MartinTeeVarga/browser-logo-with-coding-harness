@@ -116,3 +116,15 @@ Provider research references (2026-10-23):
 - Updated README, original plan/current decisions, agent rules, and compatibility notes. Added protocol, discussion, mixed-response, repair, and app event regression tests.
 - Verification: all 114 automated tests pass and `npm run build` succeeds. Live model adherence and browser visual review remain unverified here.
 - The repository exists and the original application is committed as `609558f`. The requested follow-up commit was attempted, but both staging and commit failed because creating `.git/index.lock` returned `Operation not permitted`. Changes remain in the working tree; no follow-up commit, push, or publication occurred.
+
+## Follow-up: drawing speed and turtle pen (2026-10-23)
+
+- Replaced the Slow mode switch with an accessible three-position Slow / Fast / Instant range slider, saved locally and adjustable during execution. Existing Slow preferences migrate to the new setting. Fast divides both instruction and movement delays by ten; rendering/browser scheduling adds its own overhead.
+- Animated modes show a turtle silhouette at the current pen position, including when the program hides the turtle. Its color refreshes with the pen color; explicit frame rendering keeps the cursor aligned with drawing updates. Language visibility and shape remain unchanged.
+- Run uses a square Stop icon throughout execution and restores its triangle afterward. The chat welcome now invites drawing requests, code changes, and Logo questions.
+- Verification: all 117 automated tests pass, covering speed ratios/final-state equivalence, changing speed during motion, turtle rendering/color, slider event wiring, and Run/Stop icons. Static build succeeds. Live browser visual review remains unverified.
+
+## Follow-up: consistent stylized turtle (2026-10-23)
+
+- Matched the animated pen to the welcome turtle and favicon, simplifying all three to rounded flippers/head, an oval shell, and a single geometric shell detail. The moving turtle retains pen color and heading.
+- Verification: all 117 automated tests pass and the static build succeeds. Browser visual review remains unverified.

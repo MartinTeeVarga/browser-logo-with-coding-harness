@@ -21,6 +21,8 @@ Local modifications to `logo.js`:
 
 `turtle.js` adds TRIANGLE/TURTLE cursor selection, preserves shape/pen width in turtle state, draws the cursor in the pen color, and supports a presentation-only slow execution cursor. The application provides an OffscreenCanvas worker adapter, a worker-compatible flood fill, bitmap delivery, pointer state, and interpolated motion/turn pacing.
 
+The turtle silhouette now matches the simplified rounded welcome mark and favicon. Additional turtle renderer modification: expose synchronous frame rendering, refresh the cursor after pen-color changes, and use the turtle silhouette as the animated execution pen without altering Logo shape or visibility state.
+
 ## CodeMirror
 
 CodeMirror 5.65.16, minified distribution obtained from the cdnjs repository:

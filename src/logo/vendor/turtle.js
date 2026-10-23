@@ -143,11 +143,13 @@
     }
 
     #tick() {
-      function invert(p) { return [-p[0], p[1]]; }
-
       requestAnimationFrame(this.#tick.bind(this));
+      this.render();
+    }
+
+    render() {
       const cur = JSON.stringify([this.x, this.y, this.r, this.visible,
-                                  this.sx, this.sy, this.width, this.height, this.shape, this.showExecutionCursor, this.#turtles]);
+                                  this.sx, this.sy, this.width, this.height, this.shape, this.color, this.showExecutionCursor, this.#turtles]);
       if (cur === this.#last_state) return;
       this.#last_state = cur;
 
@@ -164,41 +166,35 @@
           ctx.rotate(Math.PI/2 + turtle.r);
           ctx.beginPath();
 
-          if (turtle.shape === 'triangle') {
+          if (turtle.shape === 'triangle' && !turtle.showExecutionCursor) {
             ctx.moveTo(0, -15); ctx.lineTo(9, 10); ctx.lineTo(-9, 10);
             ctx.closePath(); ctx.stroke(); ctx.restore(); return;
           }
 
-          const points = [
-            [0, -20], // Head
-            [2.5, -17],
-            [3, -12],
-
-            [6, -10],
-            [9, -13], // Arm
-            [13, -12],
-            [18, -4],
-            [18, 0],
-            [14, -1],
-            [10, -7],
-
-            [8, -6], // Shell
-            [10, -2],
-            [9, 3],
-            [6, 10],
-
-            [9, 13], // Foot
-            [6, 15],
-            [3, 12],
-
-            [0, 13],
-          ];
-
-          points.concat(points.slice(1, -1).reverse().map(invert))
-            .forEach((pair, index) => {
-              ctx[index ? 'lineTo' : 'moveTo'](pair[0], pair[1]);
-            });
-
+          // Match the welcome mark/favicon: rounded head and flippers,
+          // an oval shell, and one simple geometric shell detail.
+          ctx.scale(0.75, 0.75);
+          ctx.translate(-32, -33);
+          ctx.lineWidth = 2.5;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          [[23, 24, 17, 19], [41, 24, 47, 19],
+           [23, 42, 18, 47], [41, 42, 46, 47],
+           [32, 48, 32, 53]].forEach(([x, y, endX, endY]) => {
+            ctx.moveTo(x, y); ctx.lineTo(endX, endY);
+          });
+          ctx.moveTo(27, 18); ctx.lineTo(27, 13);
+          ctx.arc(32, 13, 5, Math.PI, 0);
+          ctx.lineTo(37, 18);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.ellipse(32, 33, 13, 16, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          [[32, 25], [38, 29], [38, 37], [32, 41], [26, 37], [26, 29]]
+            .forEach(([x, y], index) => ctx[index ? 'lineTo' : 'moveTo'](x, y));
           ctx.closePath();
           ctx.stroke();
 

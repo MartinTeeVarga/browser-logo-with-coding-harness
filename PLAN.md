@@ -26,7 +26,7 @@ The initial provider proposal was Gemini with a free tier and browser sign-in. T
 - The initial canvas message says **“Press Run to try the code.”**
 - Display the user's remaining Puter allowance when the API makes it available. Show unavailable status rather than inventing a balance, and keep chat usable if the lookup fails.
 - Automatically repair interpreter errors reported after Run: submit the failed program and diagnostic, validate the response, preserve newer edits, and keep repaired execution manual.
-- Add a sliding Slow mode switch, with source-line highlighting/autoscroll and animated turtle movement, turns, and pen appearance.
+- Provide a Slow / Fast / Instant speed slider. Slow retains the original pacing; Fast uses ten times shorter animation delays. Animated modes use a turtle as the moving pen, with source-line highlighting/autoscroll and current pen color. Run changes its triangle to a square while executing. The welcome invites drawings and Logo questions.
 - Allow Logo-focused conversation with optional explanations. Exactly one fenced `logo` block supplies a complete editor replacement; prose-only answers leave the editor unchanged. Validate extracted code, reject foreign/ambiguous code blocks, and steer unrelated chat back to Logo. This supersedes the original source-only response contract.
 - Keep a local Git repository and commit the work. Store these requirements and established agent rules in the project.
 

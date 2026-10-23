@@ -6,12 +6,18 @@ import { createSlowExecution } from './slow.js';
 globalThis.requestAnimationFrame ||= callback => setTimeout(callback, 32);
 let canvas, turtleCanvas, turtle, logo, pendingInput, outputLength = 0, painting = false;
 let lastPointer = { x: 0, y: 0, buttons: 0 };
-let slow = false;
+let speed = 'instant';
+const animated = () => speed !== 'instant';
+function setSpeed(value) {
+  speed = ['slow', 'fast', 'instant'].includes(value) ? value : 'instant';
+  if (turtle) turtle.showExecutionCursor = animated();
+}
 
 async function paint() {
   if (!canvas || painting) return;
   painting = true;
   try {
+    turtle?.render();
     const [drawing, cursor] = await Promise.all([createImageBitmap(canvas), createImageBitmap(turtleCanvas)]);
     self.postMessage({ type: 'frame', drawing, cursor }, [drawing, cursor]);
   } finally { painting = false; }
@@ -20,12 +26,12 @@ async function paint() {
 self.onmessage = async ({ data }) => {
   if (data.type === 'input') { pendingInput?.(data.value); pendingInput = null; return; }
   if (data.type === 'pointer') { lastPointer = data; return; }
-  if (data.type === 'slow') { slow = Boolean(data.enabled); if (turtle) turtle.showExecutionCursor = slow; return; }
+  if (data.type === 'speed') { setSpeed(data.speed); return; }
   if (data.type !== 'run') return;
   let timer;
   let phase = 'validation';
   try {
-    slow = Boolean(data.slow);
+    setSpeed(data.speed ?? (data.slow ? 'slow' : 'instant'));
     validateLogo(data.source);
     phase = 'setup';
     canvas = new OffscreenCanvas(1000, 1000);
@@ -55,7 +61,7 @@ self.onmessage = async ({ data }) => {
       context.putImageData(image, 0, 0);
     };
     turtle = new self.CanvasTurtle(context, turtleCanvas.getContext('2d'), 1000, 1000);
-    turtle.showExecutionCursor = slow;
+    turtle.showExecutionCursor = animated();
     turtle.color = '#667d50';
     turtle.penwidth = 1.6;
     turtle.clear();
@@ -80,7 +86,7 @@ self.onmessage = async ({ data }) => {
     };
     logo = createInterpreter(turtle, stream);
     const pacing = createSlowExecution({
-      turtle, enabled: () => slow, frame: paint,
+      turtle, enabled: animated, speed: () => speed, frame: paint,
       wait: ms => new Promise(resolve => setTimeout(resolve, ms)),
       step: info => self.postMessage({type: 'step', ...info})
     });

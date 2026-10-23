@@ -7,8 +7,9 @@
 - Keep the canvas square and anchored to the left. In landscape, code and chat use all remaining horizontal space. In square/portrait viewports, place the panels below the canvas.
 - Keep code editable, collapsible, and syntax-highlighted for the actual interpreter dialect.
 - Keep chat controls minimal: send on Enter; Shift+Enter inserts a newline. No model picker or extra chat tools.
-- Use “code,” not “flower,” in the initial canvas instruction.
-- Provide a sliding Slow mode switch beside Run. Slow mode highlights/autoscrolls the executing source line and animates the turtle without changing the program's results.
+- Keep the welcome mark, favicon, and animated turtle pen visually consistent: a minimal rounded turtle with an oval shell and geometric shell detail.
+- Use “code,” not “flower,” in the initial canvas instruction. The chat welcome invites drawing requests, code changes, and questions about Logo.
+- Provide a three-position speed slider beside Run: Slow (original pacing), Fast (one-tenth of the animation delays), and Instant (unpaced). Animated modes highlight/autoscroll the executing source line and use a visible turtle as the moving pen in its current color, without changing language results. Run shows a triangle while idle and a square while running.
 
 ## Language and execution
 

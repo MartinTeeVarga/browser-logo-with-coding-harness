@@ -22,7 +22,9 @@
 
 - Use Puter with each user's own account and allowance. No application-owned shared quota or backend proxy.
 - The selected model is `openai/gpt-6-luna`, with medium reasoning. No silent model fallback.
-- The model returns only complete Logo source, without Markdown fences, prose, JSON, or foreign code.
+- Keep chat about Logo: explanation, drawing ideas, debugging, and learning. Prompt the model to steer unrelated requests back to Logo.
+- Replies may contain conversational prose and optionally exactly one fenced `logo` block with the complete replacement program. No block means no editor change. Extract only the block contents, validate them as Logo, and keep explanations in chat. Reject foreign, untagged, multiple, empty, or malformed code blocks; never guess prose to be editor code.
+- Code repairs must return a corrected complete Logo block; prose alone cannot satisfy a repair. Topic steering for prose is a prompt instruction, not a deterministic semantic guarantee.
 - The harness may read the current code snapshot and replace editor code. It has no execution, filesystem, network, or browser tools available to the model.
 - Validate before applying. After the initial response, allow up to three repair attempts with diagnostics. On failure, preserve code and report the failure in chat.
 - Preserve user edits made during generation. Commit validated changes atomically and make them undoable.

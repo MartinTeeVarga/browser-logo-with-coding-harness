@@ -44,6 +44,8 @@ These are outstanding product requirements, not silently accepted alternatives t
 
 ## Validation boundary
 
+The chat protocol first extracts at most one explicitly fenced `logo` block. Prose-only replies leave code unchanged. Foreign/untagged, multiple, empty, and malformed blocks are rejected before language validation. Only the extracted source reaches the validator; explanations stay in chat. The system prompt steers conversation toward Logo, but natural-language topic compliance depends on model behavior.
+
 The validator uses the interpreter's reader and expression compiler in a fresh instance. It registers literal procedure definitions and compiles their bodies, instruction lists, and templates without invoking candidate instructions. It rejects unknown procedures when they are statically visible. The shared dialect contract also checks known literal input types/shapes for core drawing/control primitives, including SETPOS's single coordinate list, SETXY's two numbers, and ARC's two numeric inputs. Standalone literals are rejected in command bodies, while expression contexts such as templates and IFELSE values still accept them.
 
 Runtime-generated procedure names, instruction lists assembled from data, dynamic types, nontermination, and runtime exceptions cannot be proved safe or correct by these static checks. A program can pass validation and still fail after Run. Some otherwise valid dynamically defined programs may require additional validator support before acceptance.

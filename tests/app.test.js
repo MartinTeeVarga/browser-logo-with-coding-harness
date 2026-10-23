@@ -1,3 +1,4 @@
+const logoReply = source => '```logo\n' + source.trim() + '\n```';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -7,7 +8,7 @@ import { basePrompt, replaceCode, repairCode, RuntimeRepairBudget } from '../src
 
 // Exercise the real app event handlers in a small DOM/editor adapter. No live
 // browser, auth session, model request, or drawing is involved in these tests.
-async function app(t, generate = async () => 'fd 20') {
+async function app(t, generate = async () => logoReply('fd 20')) {
   class Element {
     constructor() { this.value = ''; this.textContent = ''; this.style = {}; this.hidden = false; this.children = []; this.listeners = {}; this.classes = new Set(); this.classList = {toggle:(name,on)=>on?this.classes.add(name):this.classes.delete(name),add:name=>this.classes.add(name),remove:name=>this.classes.delete(name)}; }
     addEventListener(name, fn) { this.listeners[name] = fn; }
@@ -100,4 +101,29 @@ test('Slow switch sends its state, highlights the active line, and autoscrolls',
   assert.equal(state.drawing().messages.at(-1).enabled,false);
   await state.get('run').emit('click'); // Stop never starts an AI repair.
   assert.equal(state.requests.length,0);
+});
+
+test('chat discussion displays prose and retains conversation without editor or execution changes', async t => {
+  const reply = 'REPEAT repeats a Logo instruction list. Try changing the repeat count.';
+  const state = await app(t, async () => reply);
+  const original = state.source();
+  state.get('message').value='What does REPEAT do?';
+  await state.get('composer').emit('submit');
+  assert.equal(state.source(), original);
+  assert.equal(state.workers.length, 0);
+  assert.equal(state.get('messages').children.at(-1).textContent, reply);
+  state.get('message').value='And FD?';
+  await state.get('composer').emit('submit');
+  assert.ok(state.requests[1].some(m=>m.role==='assistant'&&m.content===reply));
+});
+
+test('chat with a Logo block shows the explanation and updates only the code', async t => {
+  const response = 'This draws a line.\n\n' + logoReply('fd 30');
+  const state = await app(t, async () => response);
+  state.get('message').value='Draw a line';
+  await state.get('composer').emit('submit');
+  assert.equal(state.source(), 'fd 30');
+  assert.equal(state.workers.filter(w=>w.url.includes('draw.worker')).length, 0);
+  assert.equal(state.get('messages').children.at(-2).textContent, 'This draws a line.');
+  assert.match(state.get('messages').children.at(-1).textContent, /Press Run/);
 });

@@ -141,10 +141,11 @@ async function repairPendingRun() {
     });
     history.push(
       { role: 'user', content: `Repair the interpreter error: ${JSON.stringify(diagnostic)}` },
-      { role: 'assistant', content: result.source }
+      { role: 'assistant', content: result.response }
     );
     if (history.length > 12) history.splice(0, history.length - 12);
     status('Code repaired. Press Run to try it.');
+    if (result.reply) bubble(result.reply);
     bubble('The code is repaired and validated. Press Run to try it.');
   } catch (error) {
     bubble(['validation', 'conflict', 'repair_limit'].includes(error.code) ? error.message : providerError(error), 'assistant error');
@@ -330,9 +331,10 @@ $('composer').addEventListener('submit', async event => {
       generate, validate: validateInWorker,
       onStatus: message => { $('chat-status').textContent = message; }
     });
-    history.push({ role: 'user', content: request }, { role: 'assistant', content: result.source });
+    history.push({ role: 'user', content: request }, { role: 'assistant', content: result.response });
     if (history.length > 12) history.splice(0, history.length - 12);
-    bubble('The code is ready. Press Run to see it.');
+    if (result.reply) bubble(result.reply);
+    if (result.source !== null) bubble('The code is ready. Press Run to see it.');
   } catch (error) {
     bubble(error.code === 'validation' || error.code === 'conflict' ? error.message : providerError(error), 'assistant error');
     // Keep failed requests handy; the next Enter retries explicitly.

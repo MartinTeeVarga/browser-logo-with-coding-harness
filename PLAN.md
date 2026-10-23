@@ -12,7 +12,7 @@ The original requested interface:
 
 Use only the panel labels **code** and **chat**. Do not add navigation, decorative website headings, or extra chat controls. Enter sends a chat message. Code runs only when the user presses **Run**, never when the AI changes it.
 
-The coding harness reads the current editor contents and can only change code in that editor. The model returns only Logo source. Its base prompt must enforce that contract. Validate candidate Logo before applying it; if invalid, send diagnostics back and retry up to three times, then fail visibly and preserve the previous code.
+The coding harness reads the current editor contents and can only change code in that editor. The original contract required the model to return only Logo source (superseded by the conversational reply convention below). Its base prompt must enforce that contract. Validate candidate Logo before applying it; if invalid, send diagnostics back and retry up to three times, then fail visibly and preserve the previous code.
 
 The initial provider proposal was Gemini with a free tier and browser sign-in. The user requested a concise plan and a progress document before authorizing implementation.
 
@@ -27,6 +27,7 @@ The initial provider proposal was Gemini with a free tier and browser sign-in. T
 - Display the user's remaining Puter allowance when the API makes it available. Show unavailable status rather than inventing a balance, and keep chat usable if the lookup fails.
 - Automatically repair interpreter errors reported after Run: submit the failed program and diagnostic, validate the response, preserve newer edits, and keep repaired execution manual.
 - Add a sliding Slow mode switch, with source-line highlighting/autoscroll and animated turtle movement, turns, and pen appearance.
+- Allow Logo-focused conversation with optional explanations. Exactly one fenced `logo` block supplies a complete editor replacement; prose-only answers leave the editor unchanged. Validate extracted code, reject foreign/ambiguous code blocks, and steer unrelated chat back to Logo. This supersedes the original source-only response contract.
 - Keep a local Git repository and commit the work. Store these requirements and established agent rules in the project.
 
 ## Implementation plan and status
@@ -36,6 +37,7 @@ The initial provider proposal was Gemini with a free tier and browser sign-in. T
 - [x] Add syntax highlighting, manual Run/Stop, editor undo, and local code drafts.
 - [x] Add the Puter account connection and model adapter.
 - [x] Implement the narrow code-editing harness, parser validation, repair retries, and concurrent-edit protection.
+- [x] Support Logo conversation and a single explicit Logo-block editor update, with protocol validation and preserved repair limits.
 - [x] Share concrete Logo call signatures between the prompt and validator; cover reported house-code failures with regression tests.
 - [x] Add left-aligned layout, flexible remaining panel width, corrected empty-state text, and account allowance display.
 - [x] Add runtime error repair, FILLED signature validation, and a corrected goulash regression example.
@@ -43,6 +45,6 @@ The initial provider proposal was Gemini with a free tier and browser sign-in. T
 - [x] Add this plan, `agent.md`, and the agent entry point `AGENTS.md`.
 - [ ] Complete full non-native Berkeley conformance; see `docs/COMPATIBILITY.md` for specific gaps.
 - [ ] Complete visual/browser and live-account verification where environment access permits it.
-- [ ] Initialize Git and commit. The coding environment currently rejects creating `.git`; the source is prepared for a normal local commit.
+- [x] Initialize Git and commit the original application (`609558f`). Follow-up staging/commit remains blocked by the environment denying `.git/index.lock`; see `PROGRESS.md`.
 
 See `PROGRESS.md` for current verification results and implementation details.

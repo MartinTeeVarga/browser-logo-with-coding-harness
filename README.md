@@ -36,7 +36,22 @@ Only AI chat requires internet access. The drawing engine, editor, styles, and s
 
 The Puter adapter uses `openai/gpt-6-luna` with medium reasoning, selected internally in `src/puter.js`. This model is listed in [Puter's model catalog](https://developer.puter.com/ai/models/). Puter's SDK is loaded from its official `https://js.puter.com/v2/` endpoint. Users authorize their own accounts; model usage and any repair attempts consume their individual Puter allowance. The app never buys credits or switches models automatically. Provider-owned upgrade or permission dialogs remain under the user's control.
 
-The harness supplies conversation context and the current editor snapshot to the model. The only accepted result is a complete Logo replacement. It rejects tool calls, Markdown wrappers, non-Logo syntax, invalid literal instruction bodies, and native commands before applying the response. It permits the first generation plus three repair requests with parser diagnostics. Invalid responses never enter the editor. A revision check prevents generation from overwriting user edits made in the meantime.
+Chat can explain the current program, discuss drawing ideas, and teach Logo without changing the editor. The system prompt keeps conversation about Logo and steers unrelated requests toward a Logo activity. This topic steering relies on model behavior; the app does not claim a deterministic semantic filter for prose.
+
+The harness supplies recent conversation and the current editor snapshot. Replies use this convention:
+
+- **Prose only:** display the answer in chat and leave the editor unchanged.
+- **Exactly one fenced `logo` block:** treat its contents as the complete replacement program. Display any explanation outside the block in chat. Even a runnable example replaces the whole editor; the prompt avoids code blocks during discussion unless an edit is intended.
+
+For example, an answer can say “Here is a square,” followed by:
+
+```logo
+repeat 4 [fd 100 rt 90]
+```
+
+Only `repeat 4 [fd 100 rt 90]` enters the editor, after validation. Untagged/foreign blocks, multiple blocks, empty or malformed fences, tool calls, non-Logo syntax, invalid literal instruction bodies, and native commands are rejected. Unfenced text is never guessed to be an editor update. The first response permits three repair requests with diagnostics; once a code update is rejected, prose alone cannot satisfy its repair. Invalid responses never enter the editor. A revision check prevents code updates from overwriting user edits made in the meantime. Chat text is rendered as plain text, without evaluating HTML.
+
+Recent complete replies (including the Logo block when present) stay in memory as conversation context; only code is persisted locally.
 
 Validation reads and compiles in a separate worker without running candidate instructions. It cannot prove that a dynamic Logo program will finish or avoid runtime errors. See [compatibility notes](docs/COMPATIBILITY.md) for the exact implementation status; **full Berkeley Logo conformance is not yet complete**.
 

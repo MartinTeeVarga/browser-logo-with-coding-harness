@@ -1,3 +1,4 @@
+const logoReply = source => '```logo\n' + source.trim() + '\n```';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -58,14 +59,14 @@ test('bad house output enters the repair loop and is never committed', async () 
     readEditor: () => ({ source: 'fd 10', revision: 0 }), commit: source => commits.push(source),
     validate: validateLogo,
     generate: async messages => {
-      if (++calls === 1) return invalid;
+      if (++calls === 1) return logoReply(invalid);
       assert.match(messages.at(-1).content, /SETPOS.*SETXY/);
       assert.equal(commits.length, 0);
-      return corrected;
+      return logoReply(corrected);
     }
   });
   assert.equal(result.repairs, 1);
-  assert.deepEqual(commits, [corrected]);
+  assert.deepEqual(commits, [corrected.trim()]);
 });
 
 test('runtime also rejects dynamically computed scalar SETPOS input', async () => {

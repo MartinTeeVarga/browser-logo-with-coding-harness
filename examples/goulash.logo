@@ -1,0 +1,157 @@
+to ovalpath :cx :cy :rx :ry
+  setxy (:cx + (:rx * (cos 0))) (:cy + (:ry * (sin 0)))
+  repeat 72 [
+    setxy (:cx + (:rx * (cos (repcount * 5)))) (:cy + (:ry * (sin (repcount * 5))))
+  ]
+end
+
+to oval :cx :cy :rx :ry :color
+  setpencolor :color
+  setpensize 2
+  pu
+  setxy (:cx + :rx) :cy
+  pd
+  filled :color [ovalpath :cx :cy :rx :ry]
+  pu
+end
+
+to disk :cx :cy :r :color
+  oval :cx :cy :r :r :color
+end
+
+to bowlbody
+  setpencolor [32 12 10]
+  setpensize 5
+  pu
+  setpos [-250 24]
+  pd
+  filled [32 12 10] [
+    setpos [-250 24]
+    setxy -238 -48
+    setxy -205 -139
+    setxy -150 -205
+    setxy -78 -235
+    setxy 0 -244
+    setxy 78 -235
+    setxy 150 -205
+    setxy 205 -139
+    setxy 238 -48
+    setxy 250 24
+    setpos [-250 24]
+  ]
+  pu
+end
+
+to bowlstripe
+  setpencolor [100 66 38]
+  setpensize 5
+  pu
+  setpos [-218 -70]
+  pd
+  setxy -190 -144
+  setxy -145 -195
+  setxy -85 -218
+  setxy 0 -227
+  setxy 85 -218
+  setxy 145 -195
+  setxy 190 -144
+  setxy 218 -70
+  pu
+end
+
+to steam :x :y
+  setpencolor [96 96 91]
+  setpensize 5
+  pu
+  setxy :x :y
+  pd
+  setxy (:x - 12) (:y + 20)
+  setxy (:x + 8) (:y + 40)
+  setxy (:x + 15) (:y + 61)
+  setxy (:x - 2) (:y + 80)
+  pu
+end
+
+to goulash
+  clearscreen
+  ht
+  setbackground [88 91 93]
+  setscrunch 1 1
+
+  oval 0 -250 275 25 [45 36 28]
+
+  steam -95 105
+  steam 5 123
+  steam 105 105
+
+  bowlbody
+  bowlstripe
+
+  oval 0 23 254 54 [39 13 9]
+  oval 0 28 239 42 [73 24 10]
+
+  disk -145 43 22 [58 17 10]
+  disk -79 8 19 [53 15 9]
+  disk -8 48 23 [62 19 10]
+  disk 76 5 21 [52 15 9]
+  disk 148 44 20 [62 19 10]
+  disk -105 66 13 [82 30 12]
+  disk 43 70 15 [88 35 13]
+  disk 113 54 12 [82 29 11]
+  disk -34 10 12 [92 45 16]
+  disk 179 15 11 [90 43 15]
+  disk -171 18 10 [86 35 12]
+
+  disk -126 3 7 [34 62 20]
+  disk -58 58 7 [30 58 18]
+  disk 18 13 8 [31 63 20]
+  disk 94 31 7 [27 55 17]
+  disk 134 5 8 [32 64 18]
+  disk 4 77 6 [30 61 18]
+  disk -190 39 6 [28 60 17]
+  disk 191 39 6 [29 57 18]
+
+  setpencolor [37 70 26]
+  setpensize 6
+  pu
+  setpos [-25 52]
+  pd
+  setxy -8 65
+  setxy 11 61
+  setxy 26 47
+  pu
+  setpos [-8 64]
+  pd
+  setxy -5 43
+  pu
+
+  setpencolor [35 68 25]
+  setpensize 5
+  pu
+  setpos [62 45]
+  pd
+  setxy 78 59
+  setxy 94 55
+  setxy 106 43
+  pu
+  setpos [78 57]
+  pd
+  setxy 78 39
+  pu
+
+  setpencolor [100 77 49]
+  setpensize 4
+  pu
+  setpos [-204 -77]
+  pd
+  setxy -178 -142
+  setxy -132 -184
+  pu
+  setpos [204 -77]
+  pd
+  setxy 178 -142
+  setxy 132 -184
+  pu
+end
+
+goulash

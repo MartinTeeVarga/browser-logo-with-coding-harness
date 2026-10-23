@@ -1,0 +1,14 @@
+{
+  "name": "browser-logo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "build": "node scripts/build.mjs",
+    "preview": "node scripts/serve.mjs dist",
+    "test": "node --test tests/*.test.js",
+    "inventory": "node scripts/inventory.mjs"
+  }
+}

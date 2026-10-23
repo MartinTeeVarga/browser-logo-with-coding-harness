@@ -1,0 +1,53 @@
+to rectangle :width :height
+  setheading 90
+  repeat 2 [fd :width lt 90 fd :height lt 90]
+end
+
+to smokePuff :i
+  pu
+  setxy (120 + 10 * :i) (275 + 25 * :i)
+  setheading 0
+  pd
+  repeat 3 [arc 100 14 rt 100]
+  pu
+end
+
+to house
+  clearscreen
+  ht
+  setpensize 2
+  setpencolor [20 20 20]
+
+  ; Ground: heading 90 points east.
+  pu setxy -380 -120 setheading 90 pd fd 760 pu
+
+  ; Walls and roof.
+  setxy -200 -120 pd rectangle 400 240 pu
+  setxy -220 120 pd
+  setxy 0 300
+  setxy 220 120
+  setxy -220 120
+  pu
+
+  ; Chimney and cap.
+  setxy 90 165 pd rectangle 60 90 pu
+  setxy 80 255 pd rectangle 80 15 pu
+
+  ; Door.
+  setxy -35 -120 pd rectangle 70 140 pu
+  setpencolor [60 40 20]
+  setpensize 1
+  setxy -18 -95 pd rectangle 36 90 pu
+
+  ; Windows.
+  setpensize 2
+  setpencolor [20 40 80]
+  setxy -150 -20 pd rectangle 70 60 pu
+  setxy 90 -20 pd rectangle 70 60 pu
+
+  ; Smoke: ARC takes angle first, then radius.
+  setpencolor [40 40 40]
+  repeat 4 [smokePuff (repcount - 1)]
+end
+
+house

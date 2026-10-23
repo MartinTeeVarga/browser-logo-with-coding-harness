@@ -3,6 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
+import { OutputBudget } from '../src/logo/resources.js';
 import { primitiveNames, validateLogo } from '../src/logo/runtime.js';
 import { basePrompt, replaceCode, repairCode, RuntimeRepairBudget } from '../src/harness.js';
 
@@ -43,7 +44,7 @@ async function app(t, generate = async () => logoReply('fd 20')) {
   const original = 'make "distance "oops\nfd :distance';
   const context = vm.createContext({
     console, URL, Worker, setTimeout, clearTimeout, queueMicrotask, OffscreenCanvas:class {},
-    primitiveNames, basePrompt, replaceCode, repairCode, RuntimeRepairBudget,
+    primitiveNames, basePrompt, replaceCode, repairCode, RuntimeRepairBudget, OutputBudget,
     connectPuter:()=>Promise.resolve(), generate:async messages=>{requests.push(messages);return generate(messages);},
     providerError:error=>error.message, getRemainingAllowance:async()=>null, formatAllowance:()=>'',
     puter:{auth:{isSignedIn:()=>true}},
@@ -130,4 +131,38 @@ test('chat with a Logo block shows the explanation and updates only the code', a
   assert.equal(state.workers.filter(w=>w.url.includes('draw.worker')).length, 0);
   assert.equal(state.get('messages').children.at(-2).textContent, 'This draws a line.');
   assert.match(state.get('messages').children.at(-1).textContent, /Press Run/);
+});
+
+test('page enforces cumulative output across clears before touching the DOM', async t => {
+  const state = await app(t);
+  await state.get('run').emit('click');
+  const worker = state.drawing();
+  worker.emit({type:'output',value:'x'.repeat(16000)});
+  worker.emit({type:'clear-output'});
+  worker.emit({type:'output',value:'x'.repeat(16000)});
+  assert.equal(state.get('output').textContent, '');
+  assert.equal(worker.terminated, true);
+  assert.match(state.get('run-status').textContent, /output exceeded/);
+  assert.equal(state.requests.length, 0);
+});
+
+test('page stops clear-message floods and creates a fresh budget for the next Run', async t => {
+  const state = await app(t);
+  await state.get('run').emit('click');
+  const worker = state.drawing();
+  for (let i = 0; i < 1001; i++) worker.emit({type:'clear-output'});
+  assert.equal(worker.terminated, true);
+  assert.match(state.get('run-status').textContent, /message limit/);
+  await state.get('run').emit('click');
+  state.drawing().emit({type:'output',value:'hello'});
+  assert.equal(state.get('output').textContent, 'hello');
+  assert.equal(state.requests.length, 0);
+});
+
+test('resource failures never trigger AI repair even if a worker marks them repairable', async t => {
+  const state = await app(t);
+  await state.get('run').emit('click');
+  state.drawing().emit({...failure,code:'RESOURCE_LIMIT',message:'Allocation limit reached.'});
+  assert.equal(state.requests.length, 0);
+  assert.match(state.get('run-status').textContent, /Allocation/);
 });

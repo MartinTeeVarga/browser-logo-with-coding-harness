@@ -25,7 +25,7 @@ function worker() {
     });
   `, { eval: true });
 }
-async function execute(source, input = '', {slow = false} = {}) {
+async function execute(source, input = '', {slow = false, speed} = {}) {
   const instance = worker();
   let output = '', frames = 0;
   const steps = [];
@@ -34,7 +34,7 @@ async function execute(source, input = '', {slow = false} = {}) {
       const timeout = setTimeout(() => reject(new Error('Worker test timed out')), 4000);
       instance.on('error', error => { clearTimeout(timeout); reject(error); });
       instance.on('message', data => {
-        if (data.type === 'ready') instance.postMessage({type:'run',source,slow});
+        if (data.type === 'ready') instance.postMessage({type:'run',source,slow,speed});
         if (data.type === 'frame') frames++;
         if (data.type === 'step') steps.push(data.line);
         if (data.type === 'output') output += data.value;
@@ -74,4 +74,35 @@ test('worker Slow mode publishes source steps and multiple frames', async () => 
   assert.equal(result.error, undefined);
   assert.deepEqual(result.steps, [1, 2]);
   assert.ok(result.frames > 2);
+});
+
+
+for (const speed of ['slow', 'fast', 'instant']) {
+  test(`${speed} enforces the same instruction budget even for empty loops`, async () => {
+    const result = await execute('repeat 100000 []', '', {speed});
+    assert.match(result.error, /instruction limit/);
+    assert.equal(result.diagnostic.code, 'RESOURCE_LIMIT');
+    assert.equal(result.diagnostic.repairable, false);
+  });
+}
+
+for (const source of [
+  'make "a array 1000000000',
+  'make "a mdarray [10000 10000]',
+  'make "chunk "x repeat 12 [make "chunk (word :chunk :chunk)] repeat 10 [type :chunk cleartext]',
+  'repeat 1100 [cleartext]',
+  'repeat 1100 [type "||]'
+]) {
+  test(`worker stops resource abuse without requesting AI repair: ${source}`, async () => {
+    const result = await execute(source);
+    assert.equal(result.diagnostic.code, 'RESOURCE_LIMIT');
+    assert.equal(result.diagnostic.repairable, false);
+    assert.ok(result.output.length <= 20000);
+  });
+}
+
+test('turtle indices are bounded before sparse-array growth', async () => {
+  const result = await execute('setturtle 1000000000');
+  assert.equal(result.diagnostic.code, 'RESOURCE_LIMIT');
+  assert.equal(result.diagnostic.repairable, false);
 });

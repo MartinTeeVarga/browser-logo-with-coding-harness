@@ -1,10 +1,11 @@
 import { createInterpreter, validateLogo } from './runtime.js';
 import './vendor/turtle.js';
+import { createProgramOutput } from './output.js';
 import { createSlowExecution } from './slow.js';
 
 // Workers have no animation-frame API on some browsers.
 globalThis.requestAnimationFrame ||= callback => setTimeout(callback, 32);
-let canvas, turtleCanvas, turtle, logo, pendingInput, outputLength = 0, painting = false;
+let canvas, turtleCanvas, turtle, logo, pendingInput, painting = false;
 let lastPointer = { x: 0, y: 0, buttons: 0 };
 let speed = 'instant';
 const animated = () => speed !== 'instant';
@@ -28,7 +29,7 @@ self.onmessage = async ({ data }) => {
   if (data.type === 'pointer') { lastPointer = data; return; }
   if (data.type === 'speed') { setSpeed(data.speed); return; }
   if (data.type !== 'run') return;
-  let timer;
+  let timer, output;
   let phase = 'validation';
   try {
     setSpeed(data.speed ?? (data.slow ? 'slow' : 'instant'));
@@ -70,15 +71,12 @@ self.onmessage = async ({ data }) => {
       clickpos: { get: () => [lastPointer.x, lastPointer.y] },
       button: { get: () => lastPointer.buttons }
     });
+    output = createProgramOutput(message => self.postMessage(message));
     const stream = {
-      write(...parts) {
-        const value = parts.join('');
-        if (outputLength + value.length > 20000) throw new Error('Program output exceeded 20,000 characters.');
-        outputLength += value.length;
-        self.postMessage({ type: 'output', value });
-      },
-      clear() { outputLength = 0; self.postMessage({ type: 'clear-output' }); },
+      write: output.write,
+      clear: output.clear,
       read(prompt = '') {
+        output.flush();
         self.postMessage({ type: 'input', prompt });
         return new Promise(resolve => { pendingInput = resolve; });
       },
@@ -95,6 +93,7 @@ self.onmessage = async ({ data }) => {
     timer = setInterval(paint, 50);
     phase = 'execution';
     await logo.run(data.source);
+    output.flush();
     phase = 'rendering';
     turtle.showExecutionCursor = false;
     await new Promise(resolve => setTimeout(resolve, 40));
@@ -104,12 +103,15 @@ self.onmessage = async ({ data }) => {
     self.postMessage({ type: 'done' });
   } catch (error) {
     clearInterval(timer);
+    output?.flush();
     self.postMessage({
       type: 'error', message: error.message || String(error), phase,
-      repairable: phase === 'validation' || phase === 'execution',
+      repairable: error.code !== 'RESOURCE_LIMIT' && (phase === 'validation' || phase === 'execution'),
       procedure: error.proc || null,
-      code: typeof error.code === 'number' ? error.code : null,
+      code: error.code ?? null,
       line: typeof error.line === 'number' && error.line > 0 ? error.line : logo?.currentLine || null
     });
+  } finally {
+    output?.dispose();
   }
 };

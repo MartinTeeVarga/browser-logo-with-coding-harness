@@ -16,7 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-function LogoInterpreter(turtle, stream, savehook) {
+function LogoInterpreter(turtle, stream, savehook, resources) {
   'use strict';
 
   const self = this;
@@ -149,6 +149,7 @@ function LogoInterpreter(turtle, stream, savehook) {
   // that control is yielded back to the event loop at least every 20ms.
   let lastTimeYielded = Date.now();
   async function yieldIfNeeded() {
+    resources?.instruction();
     const currentTime = Date.now();
     if (currentTime - lastTimeYielded > 20) {
       lastTimeYielded = currentTime;
@@ -247,6 +248,7 @@ function LogoInterpreter(turtle, stream, savehook) {
 
   class LogoArray {
     constructor(size, origin) {
+      resources?.allocate(size);
       this._array = [];
       this._array.length = size;
       for (let i = 0; i < this._array.length; ++i)
@@ -255,6 +257,7 @@ function LogoInterpreter(turtle, stream, savehook) {
     }
     static from(list, origin) {
       const array = new LogoArray(0, origin);
+      resources?.allocate(list.length);
       array._array = [...list];
       return array;
     }
@@ -404,6 +407,7 @@ function LogoInterpreter(turtle, stream, savehook) {
   //
 
   function parse(string, sourceInfo = {source: String(string), offset: 0}) {
+    resources?.allocate(String(string).length);
     if (string === undefined) {
       return undefined; // TODO: Replace this with ...?
     }
@@ -577,7 +581,8 @@ function LogoInterpreter(turtle, stream, savehook) {
     return word;
   }
 
-  function parseList(stream) {
+  function parseList(stream, depth = 0) {
+    resources?.checkDepth(depth);
     const list = [];
     const start = stream.lastEnd;
     let atom = '',
@@ -612,11 +617,11 @@ function LogoInterpreter(turtle, stream, savehook) {
         return list;
       }
       if (c === '[') {
-        list.push(parseList(stream));
+        list.push(parseList(stream, depth + 1));
         continue;
       }
       if (c === '{') {
-        list.push(parseArray(stream));
+        list.push(parseArray(stream, depth + 1));
         continue;
       }
       if (c === '}')
@@ -625,7 +630,8 @@ function LogoInterpreter(turtle, stream, savehook) {
     }
   }
 
-  function parseArray(stream) {
+  function parseArray(stream, depth = 0) {
+    resources?.checkDepth(depth);
     const list = [];
     let origin = 1,
         atom = '',
@@ -662,13 +668,13 @@ function LogoInterpreter(turtle, stream, savehook) {
         return LogoArray.from(list, origin);
       }
       if (c === '[') {
-        list.push(parseList(stream));
+        list.push(parseList(stream, depth + 1));
         continue;
       }
       if (c === ']')
         throw err("Unexpected ']'", ERRORS.BAD_BRACKET);
       if (c === '{') {
-        list.push(parseArray(stream));
+        list.push(parseArray(stream, depth + 1));
         continue;
       }
       throw err("Unexpected '{c}'", {c: c});
@@ -1002,6 +1008,7 @@ function LogoInterpreter(turtle, stream, savehook) {
     if (procedure.special) {
       // Special routines are built-ins that get handed the token list:
       // * workspace modifiers like TO that special-case varnames
+      resources?.checkDepth(self.stack.length + 1);
       self.stack.push(name);
       try {
         procedure.call(self, tokenlist);
@@ -1082,6 +1089,8 @@ function LogoInterpreter(turtle, stream, savehook) {
 
     if (procedure.noeval) {
       return async () => {
+        resources?.instruction();
+        resources?.checkDepth(self.stack.length + 1);
         self.stack.push(name);
         try {
           return procedure.apply(self, args);
@@ -1092,13 +1101,15 @@ function LogoInterpreter(turtle, stream, savehook) {
     }
 
     return async () => {
+      resources?.instruction();
+      resources?.checkDepth(self.stack.length + 1);
       self.stack.push(name);
       try {
         const a = [];
         for (const proc of args) {
           a.push(await proc());
         }
-        if (procedure.traced) stream.write('(', name, ' ', a.map(stringify).join(' '), ')\n');
+        if (procedure.traced) stream.write('(', name, ' ', joinText(a.map(value => stringify(value)), ' '), ')\n');
         const invoke = (inputs = a) => procedure.apply(self, inputs);
         const result = procedure.primitive && self.primitiveExecutor ? await self.primitiveExecutor(name, a, invoke) : await invoke();
         if (procedure.traced) stream.write(name, ' outputs ', result === undefined ? 'STOP' : stringify(result), '\n');
@@ -1172,6 +1183,7 @@ function LogoInterpreter(turtle, stream, savehook) {
       throw err("{_PROC_}: Expected list", ERRORS.BAD_INPUT);
     switch (Type(atom)) {
     case 'word':
+      resources?.allocate(String(atom).length);
       return [...String(atom)];
     case 'list':
       return copy(atom);
@@ -1184,17 +1196,19 @@ function LogoInterpreter(turtle, stream, savehook) {
   // Takes an atom which is to be the subject of lexpr() and a result
   // list. If the atom is a word, returns a word, otherwise a list.
   function sifw(atom, list) {
-    return (Type(atom) === 'word') ? list.join('') : list;
+    return (Type(atom) === 'word') ? joinText(list.map(value => String(value))) : list;
   }
 
   //----------------------------------------------------------------------
   // Returns a deep copy of a value (word or list). Arrays are copied
   // by reference.
   //----------------------------------------------------------------------
-  function copy(value) {
+  function copy(value, depth = 0) {
+    resources?.checkDepth(depth);
     switch (Type(value)) {
     case 'list': {
-      const result = value.map(copy);
+      resources?.allocate(value.length);
+      const result = value.map(item => copy(item, depth + 1));
       if (value.locations) trackedTokens(result, value.locations.slice(), value.sourceText);
       const info = listSources.get(value);
       if (info) listSources.set(result, info);
@@ -1244,6 +1258,7 @@ function LogoInterpreter(turtle, stream, savehook) {
 
     let lastResult;
     while (statements.length) {
+      resources?.instruction();
       const position = statements.sourceText === self.rootSourceText ? statements.locations?.[0] : undefined;
       if (typeof position === 'number') self.currentLine = self.rootSourceText.slice(0, position).split('\n').length;
       if (self.onInstruction) await self.onInstruction({line: self.currentLine || 1, procedure: self.stack.at(-1) || null});
@@ -1321,7 +1336,7 @@ function LogoInterpreter(turtle, stream, savehook) {
     const atoms = parse(string);
     for (let i = 0; i < atoms.length; ++i) {
       if (typeof atoms[i] === 'string' && ['to', '.macro'].includes(atoms[i].toLowerCase())) {
-        const remaining = atoms.slice(i + 1).map(copy);
+        const remaining = atoms.slice(i + 1).map(value => copy(value));
         self.routines.get(atoms[i].toLowerCase()).call(self, remaining);
         i = atoms.length - remaining.length - 1;
       } else if (['define', '.defmacro'].includes(String(atoms[i]).toLowerCase()) &&
@@ -1372,11 +1387,12 @@ function LogoInterpreter(turtle, stream, savehook) {
 
   self.definition = (name, proc) => {
 
-    function defn(atom) {
+    function defn(atom, depth = 0) {
+      resources?.checkDepth(depth);
       switch (Type(atom)) {
       case 'word': return String(atom);
-      case 'list': return '[ ' + atom.map(defn).join(' ') + ' ]';
-      case 'array': return '{ ' + atom.list.map(defn).join(' ') + ' }' +
+      case 'list': return '[ ' + joinText(atom.map(value => defn(value, depth + 1)), ' ') + ' ]';
+      case 'array': return '{ ' + joinText(atom.list.map(value => defn(value, depth + 1)), ' ') + ' }' +
           (atom.origin === 1 ? '' : '@' + atom.origin);
       default: throw new Error("Internal error: unknown type");
       }
@@ -1386,7 +1402,7 @@ function LogoInterpreter(turtle, stream, savehook) {
 
     def += proc.inputs.map(i => ' :' + i).join('');
     def += proc.optional_inputs.map(op =>
-      ' [:' + op[0] + ' ' + op[1].map(defn).join(' ') + ']'
+      ' [:' + op[0] + ' ' + joinText(op[1].map(value => defn(value)), ' ') + ']'
     ).join('');
     if (proc.rest)
       def += ' [:' + proc.rest + ']';
@@ -1394,7 +1410,7 @@ function LogoInterpreter(turtle, stream, savehook) {
       def += ' ' + proc.def;
 
     def += "\n";
-    def += "  " + proc.block.map(defn).join(" ").replace(new RegExp(UNARY_MINUS + ' ', 'g'), '-');
+    def += "  " + joinText(proc.block.map(value => defn(value)), " ").replace(new RegExp(UNARY_MINUS + ' ', 'g'), '-');
     def += "\n" + "end";
 
     return def;
@@ -1408,7 +1424,7 @@ function LogoInterpreter(turtle, stream, savehook) {
         defs.push(self.definition(name, proc));
       }
     });
-    return defs.join("\n\n");
+    return joinText(defs, "\n\n");
   };
 
   // API to allow aliasing. Can be used for localization. Does not
@@ -1441,30 +1457,43 @@ function LogoInterpreter(turtle, stream, savehook) {
   //   * used for repeat evaluation (DO.WHILE, WHILE, DO.UNTIL, UNTIL)
   //
 
-  function stringify(thing) {
+  // Check the resulting text size before joining, including intermediate
+  // formatting. This also prevents small nested structures expanding unchecked.
+  function joinText(parts, separator = '') {
+    let length = Math.max(0, parts.length - 1) * separator.length;
+    for (const part of parts) length += part.length;
+    resources?.allocate(length);
+    return parts.join(separator);
+  }
+
+  function stringify(thing, depth = 0) {
+    resources?.checkDepth(depth);
     switch (Type(thing)) {
     case 'list':
-      return "[" + thing.map(stringify).join(" ") + "]";
+      return "[" + joinText(thing.map(item => stringify(item, depth + 1)), " ") + "]";
     case 'array':
-      return "{" + thing.list.map(stringify).join(" ") + "}" +
+      return "{" + joinText(thing.list.map(item => stringify(item, depth + 1)), " ") + "}" +
         (thing.origin === 1 ? '' : '@' + thing.origin);
     default:
       return sexpr(thing);
     }
   }
 
-  function stringify_nodecorate(thing) {
+  function stringify_nodecorate(thing, depth = 0) {
+    resources?.checkDepth(depth);
     switch (Type(thing)) {
     case 'list':
-      return thing.map(stringify).join(" ");
+      return joinText(thing.map(item => stringify(item, depth + 1)), " ");
     case 'array':
-      return thing.list.map(stringify).join(" ");
+      return joinText(thing.list.map(item => stringify(item, depth + 1)), " ");
     default:
       return sexpr(thing);
     }
   }
 
   function formatOutput(thing, decorate = true, depth = 0) {
+    resources?.checkDepth(depth);
+    resources?.allocate(1);
     const depthLimit = maybegetvar('printdepthlimit'), widthLimit = maybegetvar('printwidthlimit');
     const width = isNumber(widthLimit) && Number(widthLimit) >= 0 ? Number(widthLimit) : Infinity;
     const type = Type(thing);
@@ -1473,7 +1502,7 @@ function LogoInterpreter(turtle, stream, savehook) {
       const items = type === 'list' ? thing : thing.list;
       const members = items.slice(0, width).map(value => formatOutput(value, true, depth + 1));
       if (items.length > width) members.push('...');
-      const result = members.join(' ');
+      const result = joinText(members, ' ');
       return decorate ? (type === 'list' ? '[' + result + ']' : '{' + result + '}' + (thing.origin === 1 ? '' : '@' + thing.origin)) : result;
     }
     let word = sexpr(thing);
@@ -1676,11 +1705,12 @@ function LogoInterpreter(turtle, stream, savehook) {
   //
 
   def("word", (...words) => {
-    return words.length ? words.map(sexpr).reduce((a, b) => a + b) : "";
+    return joinText(words.map(sexpr));
   }, {minimum: 0, default: 2, maximum: -1});
 
   def("list", (...things) => {
-    return things.map(x => x); // Make a copy
+    resources?.allocate(things.length);
+    return things.slice();
   }, {minimum: 0, default: 2, maximum: -1});
 
   def(["sentence", "se"], (...things) => {
@@ -1688,8 +1718,11 @@ function LogoInterpreter(turtle, stream, savehook) {
     for (let thing of things) {
       if (Type(thing) === 'list') {
         thing = lexpr(thing);
+        resources?.allocate(list.length + thing.length);
         list = list.concat(thing);
       } else {
+        resources?.checkSize(list.length + 1);
+        resources?.allocate(1);
         list.push(thing);
       }
     }
@@ -1698,29 +1731,43 @@ function LogoInterpreter(turtle, stream, savehook) {
 
   def("fput", (thing, list) => {
     const l = lexpr(list);
+    resources?.checkSize(l.length + 1);
+    resources?.allocate(1);
     l.unshift(thing);
     return sifw(list, l);
   });
 
   def("lput", (thing, list) => {
     const l = lexpr(list);
+    resources?.checkSize(l.length + 1);
+    resources?.allocate(1);
     l.push(thing);
     return sifw(list, l);
   });
 
   def("array", (size, origin=undefined) => {
     size = aexpr(size);
-    if (size < 1)
+    if (!Number.isSafeInteger(size) || size < 1)
       throw err("{_PROC_}: Array size must be positive integer", ERRORS.BAD_INPUT);
     origin = (origin === undefined) ? 1 : aexpr(origin);
     return new LogoArray(size, origin);
   }, {maximum: 2});
 
   def("mdarray", (sizes, origin=undefined) => {
-    sizes = lexpr(sizes).map(aexpr).map(n =>n|0);
-    if (sizes.some(size => size < 1))
+    sizes = lexpr(sizes).map(aexpr);
+    if (!sizes.length || sizes.some(size => !Number.isSafeInteger(size) || size < 1))
       throw err("{_PROC_}: Array size must be positive integer", ERRORS.BAD_INPUT);
     origin = (origin === undefined) ? 1 : aexpr(origin);
+
+    // Preflight the full tree before allocating the first dimension.
+    let product = 1, total = 0;
+    for (const size of sizes) {
+      resources?.checkSize(size);
+      product *= size;
+      total += product;
+      resources?.checkAllocation(total);
+    }
+    resources?.checkDepth(sizes.length);
 
     function make(index) {
       const n = sizes[index], a = new LogoArray(n, origin);
@@ -1744,6 +1791,7 @@ function LogoInterpreter(turtle, stream, savehook) {
     if (Type(array) !== 'array') {
       throw err("{_PROC_}: Expected array", ERRORS.BAD_INPUT);
     }
+    resources?.allocate(array.length);
     return array.list.slice();
   });
 
@@ -1757,7 +1805,9 @@ function LogoInterpreter(turtle, stream, savehook) {
 
   def("reverse", (list, tail=undefined) => {
     tail = (tail !== undefined) ? tail : (Type(list) === 'list' ? [] : '');
-    return sifw(tail, lexpr(list).reverse().concat(lexpr(tail)));
+    const head = lexpr(list), rest = lexpr(tail);
+    resources?.allocate(head.length + rest.length);
+    return sifw(tail, head.reverse().concat(rest));
   }, {maximum: 2});
 
   this.gensym_index = 0;
@@ -2032,15 +2082,15 @@ function LogoInterpreter(turtle, stream, savehook) {
   // 3.1 Transmitters
 
   def(["print", "pr"], (...things) => {
-    const s = things.map(thing => formatOutput(thing, false)).join(" ");
+    const s = joinText(things.map(thing => formatOutput(thing, false)), " ");
     return this.stream.write(s, "\n");
   }, {minimum: 0, default: 1, maximum: -1});
   def("type", (...things) => {
-    const s = things.map(thing => formatOutput(thing, false)).join("");
+    const s = joinText(things.map(thing => formatOutput(thing, false)));
     return this.stream.write(s);
   }, {minimum: 0, default: 1, maximum: -1});
   def("show", (...things) => {
-    const s = things.map(thing => formatOutput(thing)).join(" ");
+    const s = joinText(things.map(thing => formatOutput(thing)), " ");
     return this.stream.write(s, "\n");
   }, {minimum: 0, default: 1, maximum: -1});
 
@@ -2215,6 +2265,7 @@ function LogoInterpreter(turtle, stream, savehook) {
   def("iseq", (a, b) => {
     a = truncate(aexpr(a));
     b = truncate(aexpr(b));
+    resources?.allocate(Math.abs(b - a) + 1);
     const step = (a < b) ? 1 : -1;
     const list = [];
     for (let i = a; (step > 0) ? (i <= b) : (i >= b); i += step) {
@@ -2228,7 +2279,8 @@ function LogoInterpreter(turtle, stream, savehook) {
     from = aexpr(from);
     to = aexpr(to);
     count = truncate(aexpr(count));
-    if (count < 1) throw err('RSEQ needs a positive count', ERRORS.BAD_INPUT);
+    if (!Number.isSafeInteger(count) || count < 1) throw err('RSEQ needs a positive count', ERRORS.BAD_INPUT);
+    resources?.allocate(count);
     if (count === 1) return [from];
     return Array.from({length: count}, (_, i) => from + (to - from) * i / (count - 1));
   });
@@ -2403,7 +2455,7 @@ function LogoInterpreter(turtle, stream, savehook) {
   });
 
   def("label", (...args) => {
-    const s = args.map(stringify_nodecorate).join(" ");
+    const s = joinText(args.map(value => stringify_nodecorate(value)), " ");
     return turtle.drawtext(unprotect(s));
   }, {minimum: 1, default: 1, maximum: -1});
 
@@ -3300,6 +3352,7 @@ function LogoInterpreter(turtle, stream, savehook) {
     try {
       return await run(instructionlist);
     } catch(error) {
+      if (error.code === 'RESOURCE_LIMIT') throw error;
       if (!(error instanceof LogoError) || error.tag !== tag)
         throw error;
       this.last_error = error;
@@ -3361,9 +3414,13 @@ function LogoInterpreter(turtle, stream, savehook) {
       if (member === ',' && list.length) {
         out.push(await run(list.shift()));
       } else if (member === ',@' && list.length) {
-        out = out.concat(await run(list.shift()));
+        const result = await run(list.shift());
+        resources?.allocate(out.length + (Array.isArray(result) ? result.length : 1));
+        out = out.concat(result);
       } else if (Type(member) === 'word' && /^,@.+/.test(member)) {
-        out = out.concat(await run(member.substring(2)));
+        const result = await run(member.substring(2));
+        resources?.allocate(out.length + (Array.isArray(result) ? result.length : 1));
+        out = out.concat(result);
       } else if (Type(member) === 'word' && /^,.+/.test(member)) {
         out.push(await run(member.substring(1)));
       } else if (Type(member) === 'word' && /^",/.test(member)) {
@@ -3580,7 +3637,11 @@ function LogoInterpreter(turtle, stream, savehook) {
 
   def("map", async (template, ...lists) => {
     const result = [];
-    await map(template, lists, thing => { result.push(thing); });
+    await map(template, lists, thing => {
+      resources?.checkSize(result.length + 1);
+      resources?.allocate(1);
+      result.push(thing);
+    });
     return result;
   }, {minimum: 2, default: 2, maximum: -1});
 
@@ -3588,8 +3649,11 @@ function LogoInterpreter(turtle, stream, savehook) {
     let result = [];
     await map(template, lists, thing => {
       if (Type(thing) === 'list') {
+        resources?.allocate(result.length + thing.length);
         result = result.concat(thing);
       } else {
+        resources?.checkSize(result.length + 1);
+        resources?.allocate(1);
         result.push(thing);
       }
     });
@@ -3692,6 +3756,9 @@ function LogoInterpreter(turtle, stream, savehook) {
     if (lists.length === 1)
       lists = lists[0].map(lexpr);
 
+    let combinations = 1;
+    for (const list of lists) combinations *= list.length;
+    resources?.allocate(combinations);
     const indexes = lists.map(() => 0);
     let done = false;
 

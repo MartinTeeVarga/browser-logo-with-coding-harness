@@ -38,7 +38,7 @@ The browser is also a distinct platform: Unicode text, browser fonts, a square c
 | Memory introspection | NODES, GC, and .SETSEGMENTSIZE are native exclusions: the desktop allocation model cannot be exposed by JavaScript. No synthetic node counts are returned. |
 | Legacy character representation | Quoted punctuation is preserved internally through RUN and word/list operations. RAWASCII uses Unicode character values, without Berkeley's machine-specific control-character representation. |
 | Tracing and serialization | Procedure tracing exists; traced variable/property changes and exact workspace serialization/printing still need conformance work. |
-| Execution characteristics | No certified tail-call equivalence; browser time/output limits apply. Each Run starts a fresh workspace from the complete editor program. Slow mode preserves evaluation while pacing primitives and mapping literal source blocks; generated instruction lists fall back to their caller location. |
+| Execution characteristics | No certified tail-call equivalence; browser time, execution-step, allocation, nesting, turtle, and cumulative output/message limits apply at every speed (see README for allowances). These are application safeguards, not exact heap-byte accounting. Safety-limit failures are terminal and cannot be recovered through Logo CATCH/ERRACT. Each Run starts a fresh workspace from the complete editor program. Slow mode preserves evaluation while pacing primitives and mapping literal source blocks; generated instruction lists fall back to their caller location. |
 
 These are outstanding product requirements, not silently accepted alternatives to full non-native language support.
 

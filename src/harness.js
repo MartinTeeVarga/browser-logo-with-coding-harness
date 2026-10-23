@@ -103,6 +103,7 @@ export async function replaceCode({ request, history = [], readEditor, commit, g
       if (repairing && parsed.source.trim() === snapshot.source.trim()) throw new Error('This is the unchanged program that failed. Correct the reported interpreter error.');
       await validate(parsed.source);
     } catch (error) {
+      if (error.code === 'RESOURCE_LIMIT') throw error;
       validationError = error.message || 'Invalid Logo source.';
       if (attempt === maxAttempts - 1) break;
       messages.push(

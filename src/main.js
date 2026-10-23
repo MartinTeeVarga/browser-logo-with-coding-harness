@@ -1,3 +1,4 @@
+import { OutputBudget } from './logo/resources.js';
 import { primitiveNames } from './logo/runtime.js';
 import { basePrompt, replaceCode, repairCode, RuntimeRepairBudget } from './harness.js';
 import { connectPuter, generate, providerError, getRemainingAllowance, formatAllowance } from './puter.js';
@@ -208,9 +209,17 @@ new ResizeObserver(() => editor.refresh()).observe($('code-panel'));
 function validateInWorker(source) {
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL('./logo/validate.worker.js', import.meta.url), { type: 'module' });
-    const finish = error => { clearTimeout(timeout); worker.terminate(); error ? reject(new Error(error)) : resolve(); };
+    const finish = (message, code) => {
+      clearTimeout(timeout);
+      worker.terminate();
+      if (message) {
+        const error = new Error(message);
+        error.code = code;
+        reject(error);
+      } else resolve();
+    };
     const timeout = setTimeout(() => finish('Logo validation took too long.'), 4000);
-    worker.onmessage = ({ data }) => finish(data.valid ? null : data.error);
+    worker.onmessage = ({ data }) => finish(data.valid ? null : data.error, data.code);
     worker.onerror = () => finish('The Logo validator could not start. Refresh the page and try again.');
     worker.postMessage({ source });
   });
@@ -230,12 +239,11 @@ function finishRun(message, error = false) {
   $('program-input').hidden = true;
   status(message, error);
 }
-function armWatchdog(snapshot) {
+function armWatchdog() {
   clearTimeout(watchdog);
   watchdog = setTimeout(() => {
     const message = 'Stopped after 15 seconds. Try a smaller drawing or fewer repetitions.';
     finishRun(message, true);
-    queueRunRepair(snapshot, { message, phase: 'execution', procedure: null });
   }, 15000);
 }
 async function run() {
@@ -255,7 +263,8 @@ async function run() {
   $('output').textContent = ''; $('output').hidden = true;
   drawingWorker = new Worker(new URL('./logo/draw.worker.js', import.meta.url), { type: 'module' });
   const worker = drawingWorker;
-  armWatchdog(snapshot);
+  const outputBudget = new OutputBudget();
+  armWatchdog();
   worker.onmessage = ({ data }) => {
     if (worker !== drawingWorker) { data.drawing?.close(); data.cursor?.close(); return; }
     if (data.type === 'frame') {
@@ -267,12 +276,23 @@ async function run() {
     } else if (data.type === 'step') {
       if (isAnimated()) {
         showExecutionLine(data.line, snapshot);
-        armWatchdog(snapshot);
+        armWatchdog();
       }
-    } else if (data.type === 'output') {
-      $('output').hidden = false; $('output').textContent += data.value; $('output').scrollTop = $('output').scrollHeight;
-    } else if (data.type === 'clear-output') {
-      $('output').textContent = ''; $('output').hidden = true;
+    } else if (data.type === 'output' || data.type === 'clear-output') {
+      try {
+        outputBudget.accept(data.type === 'output' ? data.value : '');
+      } catch (error) {
+        finishRun(error.message, true);
+        return;
+      }
+      if (data.type === 'clear-output') {
+        $('output').textContent = '';
+        $('output').hidden = true;
+      } else {
+        $('output').hidden = false;
+        $('output').textContent += data.value;
+        $('output').scrollTop = $('output').scrollHeight;
+      }
     } else if (data.type === 'input') {
       clearTimeout(watchdog); status('Waiting for input…');
       $('program-prompt').textContent = data.prompt || 'Input';
@@ -281,7 +301,7 @@ async function run() {
       runtimeRepairBudget.reset(); pendingRunFailure = null; finishRun('');
     } else if (data.type === 'error') {
       finishRun(data.procedure ? `${data.procedure}: ${data.message}` : data.message, true);
-      if (data.repairable) queueRunRepair(snapshot, { message: data.message, procedure: data.procedure, code: data.code, phase: data.phase, line: data.line });
+      if (data.repairable && data.code !== 'RESOURCE_LIMIT') queueRunRepair(snapshot, { message: data.message, procedure: data.procedure, code: data.code, phase: data.phase, line: data.line });
     }
   };
   worker.onerror = () => finishRun('The drawing worker could not start. Refresh the page and try again.', true);
@@ -292,7 +312,7 @@ $('program-input').addEventListener('submit', event => {
   event.preventDefault();
   drawingWorker?.postMessage({ type: 'input', value: $('program-answer').value });
   $('program-answer').value = ''; $('program-input').hidden = true;
-  if (running && activeRun) { status('Drawing…'); armWatchdog(activeRun); }
+  if (running && activeRun) { status('Drawing…'); armWatchdog(); }
 });
 $('paper').addEventListener('pointermove', event => {
   if (!drawingWorker) return;

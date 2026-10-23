@@ -1,4 +1,5 @@
 import './vendor/logo.js';
+import { ExecutionBudget } from './resources.js';
 import { DIALECT_CALLS, validateLiteralCall } from './dialect.js';
 
 export const NATIVE_FEATURES = new Set(`shell setprefix prefix openread openwrite openappend openupdate close allopen closeall erasefile erf dribble nodribble setread setwrite reader writer setreadpos setwritepos readpos writepos eofp eof? filep file? save savel load silentload cslsload savepict loadpict epspict edit ed edall edps edns edpls edn edpl editfile edf seteditor setlibloc libloc sethelploc setcslsloc settemploc sethelp help setpenpattern penpattern keyp key? setcursor cursor setmargins textscreen ts fullscreen fs splitscreen ss refresh norefresh screenmode nodes gc .setsegmentsize`.split(' '));
@@ -12,7 +13,9 @@ export function createInterpreter(turtle = {}, stream = { write() {}, clear() {}
     },
     set(target, key, value) { return Reflect.set(target, key, value, target); }
   });
-  const logo = new globalThis.LogoInterpreter(turtle, outputStream);
+  const resources = new ExecutionBudget();
+  const logo = new globalThis.LogoInterpreter(turtle, outputStream, undefined, resources);
+  turtle.resources = resources;
   for (const contract of DIALECT_CALLS) {
     for (const name of contract.names) {
       const routine = logo.routines.get(name);

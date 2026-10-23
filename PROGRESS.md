@@ -128,3 +128,17 @@ Provider research references (2026-10-23):
 
 - Matched the animated pen to the welcome turtle and favicon, simplifying all three to rounded flippers/head, an oval shell, and a single geometric shell detail. The moving turtle retains pen color and heading.
 - Verification: all 117 automated tests pass and the static build succeeds. Browser visual review remains unverified.
+
+## Security audit for GitHub Pages (2026-10-23)
+
+- Reviewed `f1648d8` for a static Pages deployment. Findings, threat assumptions, source references, bounded reproductions, and remediation order are in `docs/SECURITY_AUDIT.md`.
+- Confirmed CLEARTEXT resets the output counter: the real worker emitted 50,000 characters over ten clears without hitting the 20,000-character guard. Reviewed unbudgeted allocation paths and validated oversized allocation requests without executing dangerous sizes.
+- Recorded conditional remote-SDK/shared-origin risks and browser policy/deployment workflow hardening gaps. No direct chat-XSS or Logo-to-JavaScript execution path was found in reviewed paths; this is not a comprehensive security guarantee.
+- All 117 tests pass. No live deployment headers, browser exploit, real provider account, OOM stress test, or upstream advisory scan was verified. Application behavior is unchanged; findings remain open.
+
+## Security fixes: allocation and output limits (2026-10-23)
+
+- Addressed audit S3/S4 (user findings 2/3). Added a focused shared budget module, explicit interpreter allocation/depth/step checks, multidimensional preflight, and turtle limits. Budgets apply at every speed and through aliases/generated code. Animation now handles presentation only.
+- Extracted buffered program output with cumulative character/operation budgets that clears cannot reset. Added independent receiving-page checks before DOM changes. Resource and watchdog stops preserve code and do not consume automatic AI repair quota.
+- Recorded the preference for simple, readable code over cleverness in both AGENTS.md and agent.md. Updated README, compatibility/third-party notes, plan, and the audit's remediation status.
+- Verification: all 154 tests pass and static build succeeds, including the original allocation/output reproductions, empty loops at all speeds, nested/cyclic structures, expanded output, and receiving-page rejection. Counters are conservative application allocation units, not exact heap-byte limits. Live browser low-memory testing remains outstanding.

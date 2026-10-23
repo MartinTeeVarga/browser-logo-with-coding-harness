@@ -16,7 +16,9 @@
 - Berkeley Logo is the reference dialect, excluding native platform features. Full non-native language support is the goal.
 - Do not claim full conformance while known gaps remain. Record limitations in `docs/COMPATIBILITY.md`.
 - Program execution requires an explicit Run action. AI edits, restored drafts, and validation never execute candidate code.
-- Keep execution in a worker so runaway code can be stopped without freezing the page.
+- Keep execution in a worker so runaway code can be stopped without freezing the page. Enforce allocation, value-size, nesting/call-depth, turtle, and execution-step budgets in every speed; animation must never control safety.
+- Output character and message budgets are cumulative for each Run. CLEARTEXT cannot reset them. Batch small writes and validate received output before DOM updates.
+- Resource-limit and watchdog failures stop locally without automatic AI repair; do not spend user quota on safety stops.
 - Ground the AI prompt in the interpreter's real signatures. `SETPOS [x y]`, `SETXY x y`, and `ARC angle radius` must not be confused. Heading 0 is north/up; 90 is east/right.
 
 ## AI and harness
@@ -33,6 +35,8 @@
 - Read Puter allowance only for an already authenticated account. Do not trigger login just to display usage. Usage lookup failure must not break chat or appear as a zero balance.
 
 ## Development and delivery
+
+- Prefer readability and simplicity over clever code. Use explicit control flow, small focused modules, and straightforward security checks; avoid unnecessary abstractions.
 
 - Deploy static files only. Node is for local development, tests, and builds; no runtime application server or secrets are required.
 - Preserve relative asset paths and GitHub Pages repository-subpath support.

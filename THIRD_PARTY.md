@@ -12,6 +12,7 @@ Local modifications to `logo.js`:
 
 - Module/global bridge and a non-executing compilation API.
 - Static checking of literal instruction lists, templates, procedure bodies, and forward procedure references.
+- Explicit resource-budget hooks for arrays, multidimensional preflight, generated collections/words, recursive copies/formatting, source nesting, calls, and execution/loop steps. Limits remain active for aliases and generated Logo.
 - Literal-expression metadata, shared primitive input contracts, standalone-input checks in command bodies, and strict runtime SETPOS list inputs.
 - JavaScript-free procedure arity handling; no eval or Function constructor.
 - Logo TRUE/FALSE words, case-insensitive comparison by default, protected vertical-bar words, optional-input handling, numeric error/edge-case fixes, and standard Error objects.
@@ -21,7 +22,7 @@ Local modifications to `logo.js`:
 
 `turtle.js` adds TRIANGLE/TURTLE cursor selection, preserves shape/pen width in turtle state, draws the cursor in the pen color, and supports a presentation-only slow execution cursor. The application provides an OffscreenCanvas worker adapter, a worker-compatible flood fill, bitmap delivery, pointer state, and interpolated motion/turn pacing.
 
-The turtle silhouette now matches the simplified rounded welcome mark and favicon. Additional turtle renderer modification: expose synchronous frame rendering, refresh the cursor after pen-color changes, and use the turtle silhouette as the animated execution pen without altering Logo shape or visibility state.
+Turtle movement/wrapping consumes the execution budget and turtle indices are bounded before state growth. The turtle silhouette now matches the simplified rounded welcome mark and favicon. Additional turtle renderer modification: expose synchronous frame rendering, refresh the cursor after pen-color changes, and use the turtle silhouette as the animated execution pen without altering Logo shape or visibility state.
 
 ## CodeMirror
 

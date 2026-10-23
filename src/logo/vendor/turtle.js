@@ -254,6 +254,7 @@
       }
 
       while (true) {
+        this.resources?.instruction();
         // TODO: What happens if we switch modes and turtle is outside bounds?
 
         switch (this.turtlemode) {
@@ -665,6 +666,7 @@
 
     get currentturtle() { return this.#currentturtle; }
     set currentturtle(newturtle) {
+      this.resources?.checkTurtle(newturtle);
       if (newturtle === this.#currentturtle) return;
       this.#turtles[this.#currentturtle] = {
         x: this.x,

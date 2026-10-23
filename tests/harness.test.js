@@ -127,3 +127,11 @@ test('prompt keeps conversation about Logo and establishes the editor convention
   assert.match(prompt, /prose only and no code block/);
   assert.match(prompt, /another language, even when asked/);
 });
+
+test('validation resource limits are terminal rather than consuming repair calls', async () => {
+  let calls = 0;
+  const state = setup(async () => {calls++;return logoReply('fd 10');});
+  state.options.validate = () => {const error = new Error('Allocation limit');error.code='RESOURCE_LIMIT';throw error;};
+  await assert.rejects(replaceCode(state.options), error => error.code==='RESOURCE_LIMIT');
+  assert.equal(calls, 1); assert.equal(state.commits(), 0);
+});

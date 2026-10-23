@@ -13,13 +13,13 @@ function context() {
     set: (target, key, value) => { target[key] = value; return true; }
   });
 }
-function session({slow = true, afterFrame = () => {}, speed = 'slow', instructionLimit} = {}) {
+function session({slow = true, afterFrame = () => {}, speed = 'slow'} = {}) {
   const turtle = new CanvasTurtle(context(), context(), 1000, 1000);
   const logo = createInterpreter(turtle, {write() {}, read: async () => ''});
   const lines = [], frames = [], delays = [];
   const mode = {enabled: slow, speed};
   const pacing = createSlowExecution({
-    turtle, instructionLimit, enabled: () => mode.enabled, speed: () => mode.speed,
+    turtle, enabled: () => mode.enabled, speed: () => mode.speed,
     wait: async ms => { delays.push(ms); },
     frame: async () => { frames.push({pos: turtle.position.slice(), heading: turtle.heading, color: turtle.color}); afterFrame(mode, frames.length); },
     step: info => lines.push(info.line)
@@ -62,7 +62,7 @@ test('switching Slow mode off midway completes the current movement correctly', 
 });
 
 test('slow programs cannot run an unbounded instruction stream', async () => {
-  const state = session({instructionLimit: 5});
+  const state = session();
   await assert.rejects(state.logo.run('forever [fd 1]'), /instruction limit/);
 });
 

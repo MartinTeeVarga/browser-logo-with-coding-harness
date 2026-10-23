@@ -1,7 +1,6 @@
 // Slow execution changes presentation and pacing; primitive calls still go
 // through the interpreter and use the same language semantics.
-export function createSlowExecution({ turtle, enabled, speed = () => 'slow', wait, frame, step, instructionLimit = 20000 }) {
-  let count = 0;
+export function createSlowExecution({ turtle, enabled, speed = () => 'slow', wait, frame, step }) {
   const numeric = value => (typeof value === 'number' || typeof value === 'string' && /^-?([0-9]*\.?[0-9]+(?:[eE][-+]?[0-9]+)?)$/.test(value)) && Number.isFinite(Number(value)) ? Number(value) : null;
   const forward = new Set(['FORWARD', 'FD', 'BACK', 'BK']);
   const turns = new Set(['RIGHT', 'RT', 'LEFT', 'LT']);
@@ -12,7 +11,6 @@ export function createSlowExecution({ turtle, enabled, speed = () => 'slow', wai
   return {
     async onInstruction(info) {
       if (!enabled()) return;
-      if (++count > instructionLimit) throw new Error('Slow mode reached its instruction limit. Use a bounded loop or run without Slow mode.');
       step(info);
       await delay(90);
     },

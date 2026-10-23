@@ -16,7 +16,21 @@ The square canvas is anchored to the left. In landscape, it grows to fit the win
 
 Run becomes Stop during execution. Programs run in a dedicated worker. Normal mode has a 15-second execution limit. The chat welcome invites drawing requests, code changes, and questions about Logo. A program that requests input gets an input field below the canvas; time spent awaiting input does not count toward that limit. Program output also appears below the canvas when needed.
 
-Use the speed slider beside Run: **Slow** keeps the original animation speed, **Fast** uses ten times shorter pacing delays, and **Instant** runs without animation delays. Both animated speeds use a turtle as the moving pen, follow its current pen color, and highlight/autoscroll the active source line. Code expands automatically when an animated run starts. You can change speed during execution; the selection is saved locally. The Run triangle becomes a Stop square while running. Slow mode uses a 15-second no-progress watchdog and a 20,000-instruction limit, so intentional animation can take longer than a normal run. The turtle stays visible during animated playback even when the program uses HIDETURTLE; it does not change the value of SHOWNP or the final drawing. Dynamically assembled instructions without an original source location use the calling line.
+Use the speed slider beside Run: **Slow** keeps the original animation speed, **Fast** uses ten times shorter pacing delays, and **Instant** runs without animation delays. Both animated speeds use a turtle as the moving pen, follow its current pen color, and highlight/autoscroll the active source line. Code expands automatically when an animated run starts. You can change speed during execution; the selection is saved locally. The Run triangle becomes a Stop square while running. Animated modes use a 15-second no-progress watchdog, so intentional animation can take longer than an Instant run. Every speed shares the same execution-step and allocation limits. The turtle stays visible during animated playback even when the program uses HIDETURTLE; it does not change the value of SHOWNP or the final drawing. Dynamically assembled instructions without an original source location use the calling line.
+
+Browser safety limits apply independently of speed:
+
+| Limit per Run | Allowance |
+| --- | --- |
+| Evaluation/loop/graphics steps | 20,000 |
+| Individual word or collection | 100,000 characters/elements |
+| Cumulative allocation units | 2,000,000 |
+| Data nesting / call depth | 100 |
+| Turtle indices | 0–63 |
+| Total output | 20,000 characters |
+| Output operations, including empty writes and clears | 1,000 |
+
+Allocation units account for guarded collection slots, word construction, copies, parsing, and formatting. They are conservative application counters, not measured JavaScript heap bytes. Multidimensional arrays are checked before construction. Limits also apply to aliases and generated Logo; data-size/copy checks apply during validation. Small output writes are batched, and the page independently checks received output. Clearing output does not restore its allowance. Resource-limit and watchdog stops preserve the editor and do not trigger automatic AI repair. Each manual Run gets fresh budgets.
 
 ## Static hosting
 

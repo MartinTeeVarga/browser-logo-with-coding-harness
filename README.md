@@ -96,4 +96,4 @@ The tests cover interpreter semantics, turtle geometry, worker input/output, inv
 
 See [PROGRESS.md](PROGRESS.md) for completed work and outstanding verification.
 
-The original requirements and agreed plan are in [PLAN.md](PLAN.md). Established project rules are in [agent.md](agent.md), with [AGENTS.md](AGENTS.md) as the agent entry point.
+The original requirements and agreed plan are in [PLAN.md](PLAN.md). Established project rules and agent instructions are in [AGENTS.md](AGENTS.md).

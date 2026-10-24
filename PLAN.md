@@ -42,7 +42,7 @@ The initial provider proposal was Gemini with a free tier and browser sign-in. T
 - [x] Add left-aligned layout, flexible remaining panel width, corrected empty-state text, and account allowance display.
 - [x] Add runtime error repair, FILLED signature validation, and a corrected goulash regression example.
 - [x] Add Slow mode with source mapping through procedures/nested loops, interpolated turtle movement, and a visible execution cursor.
-- [x] Add this plan, `agent.md`, and the agent entry point `AGENTS.md`.
+- [x] Add this plan and consolidate project rules and agent instructions in `AGENTS.md`.
 - [x] Address audited allocation/output weaknesses with speed-independent resource budgets, cumulative output/message limits, batching, and host-side output checks. Prefer simple, readable security code.
 - [ ] Complete full non-native Berkeley conformance; see `docs/COMPATIBILITY.md` for specific gaps.
 - [ ] Complete visual/browser and live-account verification where environment access permits it.

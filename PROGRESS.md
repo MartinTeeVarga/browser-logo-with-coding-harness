@@ -88,7 +88,7 @@ Next work: live browser/Puter verification and the remaining Berkeley conformanc
 - Added the authenticated `getMonthlyUsage()` status read. The chat footer shows the account-wide remaining amount and percentage when available, with correct documented microcent conversion and support for explicitly labeled credit units.
 - Refresh usage after sign-in, after each chat request, and on window focus. Reads have an eight-second UI timeout and a revision guard against stale responses. They never trigger login, block model generation, or turn a successful code edit into an error. Missing/invalid data displays unavailable rather than zero.
 - Official API/schema references: https://docs.puter.com/Auth/getMonthlyUsage/ ; https://docs.puter.com/Objects/monthlyusage/ . SDK source was checked to confirm the public method is a direct authenticated metering read.
-- Added `PLAN.md` with the original task and later confirmed decisions, `agent.md` with established rules, and `AGENTS.md` pointing future agents to those files.
+- Added `PLAN.md` with the original task and later confirmed decisions, established agent rules (now consolidated in `AGENTS.md`).
 - Verification: all 84 automated tests and `npm run build` pass. New allowance tests cover signed-out behavior, account amounts, credits, unavailable/malformed responses, zero, and small balances. Live account usage and visual browser review were not accessible to the coding agent; the user has confirmed the existing application runs locally.
 - Git request: attempted `git init -b main`; the environment rejected creating `the repository metadata directory` with `Operation not permitted`. No local repository or commit was created. All source is ready for the owner to run `git init -b main`, `git add .`, and `git commit -m "Build static Logo workspace with Puter chat and usage"` from this project directory.
 
@@ -140,5 +140,10 @@ Provider research references (2026-10-23):
 
 - Addressed audit S3/S4 (user findings 2/3). Added a focused shared budget module, explicit interpreter allocation/depth/step checks, multidimensional preflight, and turtle limits. Budgets apply at every speed and through aliases/generated code. Animation now handles presentation only.
 - Extracted buffered program output with cumulative character/operation budgets that clears cannot reset. Added independent receiving-page checks before DOM changes. Resource and watchdog stops preserve code and do not consume automatic AI repair quota.
-- Recorded the preference for simple, readable code over cleverness in both AGENTS.md and agent.md. Updated README, compatibility/third-party notes, plan, and the audit's remediation status.
+- Recorded the preference for simple, readable code over cleverness in the agent instructions (now consolidated in `AGENTS.md`). Updated README, compatibility/third-party notes, plan, and the audit's remediation status.
 - Verification: all 154 tests pass and static build succeeds, including the original allocation/output reproductions, empty loops at all speeds, nested/cyclic structures, expanded output, and receiving-page rejection. Counters are conservative application allocation units, not exact heap-byte limits. Live browser low-memory testing remains outstanding.
+
+## Agent instruction consolidation (2026-10-24)
+
+- Consolidated all established rules and the original agent entry-point guidance into the conventional root `AGENTS.md`. Removed the duplicate lowercase file and updated README/plan/progress references.
+- Verified the diff and references. Documentation-only change; application tests/build were not rerun.

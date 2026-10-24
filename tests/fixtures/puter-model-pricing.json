@@ -1,0 +1,88 @@
+[
+  {
+    "id": "gpt-6-luna",
+    "provider": "openai-completion",
+    "costs_currency": "usd-cents",
+    "input_cost_key": "prompt_tokens",
+    "output_cost_key": "completion_tokens",
+    "costs": {
+      "tokens": 1000000,
+      "prompt_tokens": 10,
+      "cached_tokens": 1,
+      "cache_write_tokens": 12.5,
+      "completion_tokens": 50
+    }
+  },
+  {
+    "id": "gpt-6.1-sol",
+    "provider": "openai-completion",
+    "costs_currency": "usd-cents",
+    "input_cost_key": "prompt_tokens",
+    "output_cost_key": "completion_tokens",
+    "costs": {
+      "tokens": 1000000,
+      "prompt_tokens": 200,
+      "cached_tokens": 10,
+      "cache_write_tokens": 250,
+      "completion_tokens": 1000
+    }
+  },
+  {
+    "id": "claude-sonnet-5-5",
+    "name": "Claude Sonnet 5.5",
+    "provider": "claude",
+    "costs_currency": "usd-cents",
+    "input_cost_key": "input_tokens",
+    "output_cost_key": "output_tokens",
+    "costs": {
+      "tokens": 1000000,
+      "input_tokens": 200,
+      "ephemeral_5m_input_tokens": 250,
+      "ephemeral_1h_input_tokens": 400,
+      "cache_read_input_tokens": 10,
+      "output_tokens": 1000,
+      "web_search_requests": 1000000
+    }
+  },
+  {
+    "id": "infron:openai/gpt-6-luna:flex",
+    "name": "OpenAI: GPT-6 Luna (Infron, flex)",
+    "provider": "infron",
+    "costs_currency": "usd-cents",
+    "input_cost_key": "prompt",
+    "output_cost_key": "completion",
+    "costs": {
+      "tokens": 1000000,
+      "prompt": 5,
+      "input_cache_read": 5,
+      "completion": 25
+    }
+  },
+  {
+    "id": "openrouter:openai/gpt-6.1-sol",
+    "name": "OpenAI: GPT-6.1 Sol (OpenRouter)",
+    "provider": "openrouter",
+    "costs_currency": "usd-cents",
+    "input_cost_key": "prompt",
+    "output_cost_key": "completion",
+    "costs": {
+      "tokens": 1000000,
+      "prompt": 200,
+      "completion": 1000,
+      "web_search": 1000000,
+      "input_cache_read": 10,
+      "input_cache_write": 250
+    }
+  },
+  {
+    "id": "decision-model-preview",
+    "name": "Decision-Model-Preview",
+    "provider": "alibaba",
+    "costs_currency": "usd-cents",
+    "input_cost_key": "prompt_tokens",
+    "output_cost_key": "completion_tokens",
+    "costs": {
+      "tokens": 1000000
+    }
+  }
+]

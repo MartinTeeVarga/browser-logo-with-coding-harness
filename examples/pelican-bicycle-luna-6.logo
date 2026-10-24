@@ -1,0 +1,141 @@
+to polygon :shade :points
+  setpencolor :shade
+  setpensize 2
+  pu
+  setpos first :points
+  filled :shade [
+    foreach butfirst :points [setpos ?]
+  ]
+  pu
+  setpos first :points
+  pd
+  foreach butfirst :points [setpos ?]
+  setpos first :points
+  pu
+end
+
+to ovalshape :cx :cy :rx :ry :shade
+  localmake "angle 0
+  setpencolor :shade
+  setpensize 2
+  pu
+  setxy (:cx + :rx) :cy
+  filled :shade [
+    repeat 48 [
+      make "angle :angle + 7.5
+      setxy (:cx + (:rx * cos :angle)) (:cy + (:ry * sin :angle))
+    ]
+  ]
+  pu
+  setxy (:cx + :rx) :cy
+  pd
+  make "angle 0
+  repeat 48 [
+    make "angle :angle + 7.5
+    setxy (:cx + (:rx * cos :angle)) (:cy + (:ry * sin :angle))
+  ]
+  pu
+end
+
+to inkline :shade :thick :points
+  setpencolor :shade
+  setpensize :thick
+  pu
+  setpos first :points
+  pd
+  foreach butfirst :points [setpos ?]
+  pu
+end
+
+to spoke :cx :cy :radius :angle
+  inkline [68 77 78] 2 (list
+    (list :cx :cy)
+    (list
+      (:cx + (:radius * cos :angle))
+      (:cy + (:radius * sin :angle))
+    )
+  )
+end
+
+clearscreen
+window
+ht
+setbackground [91 94 86]
+
+; Ground
+inkline [47 55 45] 4 [[-340 -245] [340 -245]]
+
+; Bicycle wheels and spokes
+ovalshape -145 -145 78 78 [29 37 40]
+ovalshape 145 -145 78 78 [29 37 40]
+ovalshape -145 -145 73 73 [86 88 81]
+ovalshape 145 -145 73 73 [86 88 81]
+
+spoke -145 -145 68 0
+spoke -145 -145 68 45
+spoke -145 -145 68 90
+spoke -145 -145 68 135
+spoke -145 -145 68 180
+spoke -145 -145 68 225
+spoke -145 -145 68 270
+spoke -145 -145 68 315
+
+spoke 145 -145 68 0
+spoke 145 -145 68 45
+spoke 145 -145 68 90
+spoke 145 -145 68 135
+spoke 145 -145 68 180
+spoke 145 -145 68 225
+spoke 145 -145 68 270
+spoke 145 -145 68 315
+
+; Bicycle frame
+inkline [22 44 59] 7 [[-145 -145] [-48 -58] [15 -145] [-145 -145]]
+inkline [22 44 59] 7 [[-48 -58] [84 -58] [15 -145]]
+inkline [22 44 59] 7 [[84 -58] [145 -145]]
+ovalshape -145 -145 9 9 [45 52 52]
+ovalshape 145 -145 9 9 [45 52 52]
+ovalshape 15 -145 14 14 [38 45 47]
+
+; Seat, handlebars, pedals
+inkline [29 35 37] 9 [[-75 -52] [-22 -52]]
+inkline [29 35 37] 7 [[84 -58] [98 -19] [125 -19]]
+inkline [29 35 37] 7 [[98 -19] [113 -29]]
+inkline [34 40 42] 5 [[15 -145] [45 -163]]
+inkline [34 40 42] 5 [[15 -145] [-13 -126]]
+inkline [27 34 37] 6 [[36 -163] [54 -163]]
+inkline [27 34 37] 6 [[-24 -126] [-4 -126]]
+
+; Pelican legs and feet, reaching down to the pedals
+inkline [207 143 49] 7 [[-8 8] [4 -42] [17 -119] [39 -153]]
+inkline [207 143 49] 7 [[22 8] [29 -44] [31 -113] [3 -126]]
+inkline [207 143 49] 5 [[39 -153] [53 -158]]
+inkline [207 143 49] 5 [[3 -126] [-10 -128]]
+
+; Pelican body
+ovalshape -2 48 66 42 [91 89 79]
+ovalshape -9 42 48 29 [75 79 73]
+
+; Wing and feather marks
+polygon [137 137 123] [[-52 51] [-19 72] [24 67] [45 45] [20 29] [-17 30]]
+inkline [101 105 94] 3 [[-35 49] [-8 56] [21 48]]
+inkline [101 105 94] 3 [[-30 39] [-4 45] [17 39]]
+
+; Long curved neck
+polygon [87 86 75] [[18 65] [39 75] [53 105] [72 124] [61 139] [41 125] [27 103] [4 85]]
+polygon [97 94 79] [[34 78] [48 85] [62 111] [76 126] [65 132] [48 118] [37 98]]
+
+; Head
+ovalshape 68 143 29 24 [92 91 78]
+ovalshape 78 147 3 3 [12 16 17]
+ovalshape 79 148 1 1 [100 100 100]
+
+; Large pelican bill and dangling pouch
+polygon [222 157 47] [[88 155] [151 147] [157 140] [151 136] [91 139] [79 125] [69 130] [79 145]]
+polygon [207 129 45] [[83 141] [145 140] [151 137] [102 131] [88 129] [78 135]]
+inkline [117 75 37] 2 [[92 143] [148 143]]
+
+; A few tail feathers
+polygon [84 83 72] [[-58 51] [-93 67] [-78 38] [-99 20] [-59 29]]
+
+ht

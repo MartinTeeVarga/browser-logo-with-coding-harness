@@ -141,12 +141,17 @@ for (const name of ['model', 'about', 'examples']) {
 }
 $('about-open').addEventListener('click', () => $('about-dialog').showModal());
 $('examples-open').addEventListener('click', () => $('examples-dialog').showModal());
-$('example-mona-lisa').addEventListener('click', async () => {
+const examples = [
+  {button:'example-mona-lisa', name:'Mona Lisa', file:'mona-lisa.logo'},
+  {button:'example-pelican-sol', name:'Pelican on a bicycle (Sol 6.1)', file:'pelican-bicycle-sol-6.1.logo'},
+  {button:'example-pelican-luna', name:'Pelican on a bicycle (Luna 6)', file:'pelican-bicycle-luna-6.logo'}
+];
+async function loadExample(example) {
   const snapshot = readEditor();
-  $('example-mona-lisa').disabled = true;
-  $('examples-status').textContent = 'Loading Mona Lisa…';
+  for (const item of examples) $(item.button).disabled = true;
+  $('examples-status').textContent = `Loading ${example.name}…`;
   try {
-    const response = await fetch('./examples/mona-lisa.logo');
+    const response = await fetch(`./examples/${example.file}`);
     if (!response.ok) throw new Error('Could not load the example. Try again.');
     const source = await response.text();
     await validateInWorker(source);
@@ -154,12 +159,17 @@ $('example-mona-lisa').addEventListener('click', async () => {
     commitSource(source, 'example');
     setCollapsed(false);
     $('examples-dialog').close();
-    status('Mona Lisa loaded. Press Run to draw it.');
+    status(`${example.name} loaded. Press Run to draw it.`);
     $('examples-status').textContent = '';
   } catch (error) {
     $('examples-status').textContent = error.message;
-  } finally { $('example-mona-lisa').disabled = false; }
-});
+  } finally {
+    for (const item of examples) $(item.button).disabled = false;
+  }
+}
+for (const example of examples) {
+  $(example.button).addEventListener('click', () => loadExample(example));
+}
 $('command-model').addEventListener('click', () => {
   if (chatting) return;
   $('message').value = ''; resizeComposer(); updateCommands();

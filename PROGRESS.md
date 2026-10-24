@@ -175,3 +175,22 @@ Provider research references (2026-10-23):
 - Added the turtle/About and Examples menu. About explains Logo and credits Martin, OpenAI Codex programming assistance, jslogo, CodeMirror, and Puter. License/third-party links open readable GitHub files. The exact supplied Mona Lisa source is bundled as a static example; loading validates and applies an undoable editor replacement, preserving edits made during loading and waiting for manual Run.
 - Caching was researched only, per user instruction. No prompt/response caching, cache-control flags, context compaction, or history behavior was added or changed.
 - Verification: all 167 automated tests pass and static build succeeds. Tests cover price normalization/unknowns, catalog and provider routing, local commands/error handling, saved model/split state, pointer/keyboard resize, menus, example edit conflicts/manual execution, static assets, and Mona Lisa with the actual turtle engine. Computer-use permission was denied; visual browser review and live Puter model catalog/generation remain unverified here.
+
+## Pelican on a bicycle examples (2026-10-24)
+
+- Added both user-supplied programs unchanged as distinct Examples entries, labeled Sol 6.1 and Luna 6. Their labels identify their supplied provenance; selecting one does not call or switch the AI model.
+- Reused one explicit example-loading function for all entries. It validates code, preserves concurrent editor changes, disables example buttons while loading, and requires manual Run.
+- Verification: all 169 tests pass, including validation and actual turtle execution of both programs with drawing coordinates within the canvas. Static build succeeds and contains both source files. Visual browser review was not performed.
+
+## Live model pricing fix (2026-10-24)
+
+- Read the public catalog endpoint used by the current Puter SDK (`/puterai/chat/models/details`). Its actual pricing uses `costs`, `costs_currency`, and provider-specific `input_cost_key`/`output_cost_key`, rather than the older docs' `cost.input`/`cost.output` shape.
+- Support both schemas with explicit USD-cent/token-unit conversion. Preserve zero prices and variants; never substitute cached-input rates or assume missing prices are free. Added a reduced public-response fixture covering OpenAI, Anthropic, Infron, OpenRouter, and incomplete metadata.
+- Verified against the live 1,019-model catalog: 451 cheap ($), 403 reasonable ($$), 104 expensive ($$$), and 61 entries without comparable complete token rates (?). Counts/prices are a snapshot, not a fixed catalog or price guarantee. No paid model calls or caching changes were made.
+- Verification: all 171 automated tests pass and static build succeeds. This includes the two pelican examples and live-schema price regression tests.
+
+## Updated Sol pelican layering (2026-10-24)
+
+- Replaced the Sol 6.1 pelican with the user’s updated version: the left leg and foot are drawn before the wheels/frame, placing them behind the bicycle. The Examples description and README explicitly credit Luna’s draw-order adjustment to the Sol illustration.
+- Included the pending Luna 6 example and live catalog pricing fix in the requested commit/push.
+- Verification: all 171 automated tests pass and static build succeeds; both pelican sources validate and run with the real turtle engine.

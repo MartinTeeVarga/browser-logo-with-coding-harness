@@ -1,0 +1,144 @@
+to polygon :shade :points
+  setpencolor :shade
+  setpensize 2
+  pu
+  setpos first :points
+  pd
+  filled :shade [
+    foreach butfirst :points [setpos ?]
+    setpos first :points
+  ]
+  pu
+end
+
+to ovalshape :cx :cy :rx :ry :shade
+  localmake "angle 0
+  setpencolor :shade
+  setpensize 2
+  pu
+  setxy (:cx + :rx) :cy
+  pd
+  filled :shade [
+    repeat 48 [
+      make "angle (:angle + 7.5)
+      setxy (:cx + :rx * cos :angle) (:cy + :ry * sin :angle)
+    ]
+  ]
+  pu
+end
+
+to inkline :shade :thick :points
+  setpencolor :shade
+  setpensize :thick
+  pu
+  setpos first :points
+  pd
+  foreach butfirst :points [setpos ?]
+  pu
+end
+
+to wheel :cx :cy
+  ovalshape :cx :cy 80 80 [20 27 30]
+  ovalshape :cx :cy 72 72 [92 96 91]
+  localmake "angle 0
+  repeat 12 [
+    inkline [65 72 73] 2 (list
+      (list :cx :cy)
+      (list (:cx + 69 * cos :angle) (:cy + 69 * sin :angle))
+    )
+    make "angle (:angle + 30)
+  ]
+  ovalshape :cx :cy 8 8 [40 48 50]
+end
+
+to pelicanride
+  clearscreen
+  window
+  ht
+  setscrunch 1 1
+  setbackground [91 96 97]
+
+  ; Grass and a soft shadow
+  polygon [79 88 70] [[-395 -227] [395 -227] [395 -310] [-395 -310]]
+  ovalshape 0 -232 245 12 [68 78 62]
+  inkline [47 62 45] 3 [[-365 -226] [365 -226]]
+
+  inkline [83 53 16] 7 [[-25 20] [-42 -43] [-8 -84] [-13 -120]]
+
+  ; Left foot
+  polygon [94 66 22] [[-14 -116] [-29 -123] [-22 -127] [-10 -124] [0 -127] [7 -122]]
+
+  ; Wheels
+  wheel -145 -145
+  wheel 145 -145
+
+  ; Bicycle frame
+  inkline [16 48 67] 8 [[-145 -145] [-48 -58] [15 -145] [-145 -145]]
+  inkline [16 48 67] 8 [[-48 -58] [84 -58] [15 -145]]
+  inkline [16 48 67] 8 [[84 -58] [145 -145]]
+  inkline [44 73 82] 2 [[-46 -62] [78 -62]]
+
+  ; Seat post, saddle, and handlebars
+  inkline [31 39 42] 6 [[-48 -58] [-53 -35]]
+  inkline [23 29 32] 11 [[-76 -35] [-25 -35]]
+  inkline [31 39 42] 6 [[84 -58] [98 -12] [126 -12] [132 -23]]
+  inkline [20 26 28] 8 [[118 -12] [129 -12]]
+
+  ; Crank and pedals
+  ovalshape 15 -145 15 15 [37 45 48]
+  ovalshape 15 -145 8 8 [73 78 76]
+  inkline [34 40 42] 5 [[15 -145] [45 -163]]
+  inkline [34 40 42] 5 [[15 -145] [-13 -126]]
+  inkline [22 28 30] 7 [[34 -163] [57 -163]]
+  inkline [22 28 30] 7 [[-25 -126] [-3 -126]]
+
+  ; Legs
+  inkline [92 65 21] 8 [[7 18] [28 -38] [14 -88] [43 -153]]
+
+  ; Webbed feet resting on the pedals
+  polygon [98 70 24] [[41 -148] [31 -158] [37 -162] [45 -158] [55 -162] [63 -157]]
+
+  ; Tail feathers
+  polygon [84 85 79] [[-57 66] [-109 83] [-86 52] [-108 37] [-62 31]]
+  inkline [63 68 64] 2 [[-91 69] [-61 48]]
+
+  ; Plump white body
+  ovalshape -16 65 79 54 [97 96 89]
+  ovalshape -27 48 56 31 [89 90 83]
+
+  ; Folded wing and feathers
+  polygon [79 82 78] [[-73 72] [-40 93] [4 83] [33 58] [5 38] [-39 40]]
+  inkline [59 66 64] 3 [[-58 66] [-27 75] [9 59]]
+  inkline [59 66 64] 3 [[-55 54] [-28 61] [-1 49]]
+  inkline [68 73 69] 2 [[-42 43] [-14 47]]
+
+  ; Long curved neck
+  polygon [89 90 83] [[11 84] [35 100] [43 139] [40 174] [50 205] [71 217] [89 202] [73 181] [69 143] [61 110] [37 80]]
+  polygon [99 98 91] [[30 88] [48 107] [57 143] [55 176] [63 199] [78 207] [87 200] [73 178] [69 140] [59 108] [42 85]]
+
+  ; Head and long bill
+  ovalshape 79 215 33 27 [99 98 91]
+  polygon [99 73 25] [[103 225] [237 211] [253 202] [236 197] [105 203]]
+  polygon [94 61 22] [[108 204] [235 199] [196 179] [153 166] [120 174] [99 193]]
+  polygon [99 80 42] [[116 198] [215 196] [187 182] [151 175] [127 182]]
+  inkline [63 39 17] 2 [[108 206] [239 203]]
+
+  ; Eye and a tiny white glint
+  ovalshape 88 224 7 7 [91 72 26]
+  ovalshape 89 225 4 4 [12 17 19]
+  ovalshape 90 227 1.5 1.5 [100 100 100]
+
+  ; A jaunty crest
+  inkline [96 95 86] 5 [[59 235] [49 250]]
+  inkline [96 95 86] 5 [[68 239] [65 256]]
+  inkline [96 95 86] 4 [[77 240] [80 252]]
+
+  ; Motion marks behind the bicycle
+  inkline [57 72 76] 3 [[-270 -95] [-229 -95]]
+  inkline [57 72 76] 3 [[-287 -119] [-244 -119]]
+  inkline [57 72 76] 3 [[-268 -143] [-242 -143]]
+  pu
+  ht
+end
+
+pelicanride

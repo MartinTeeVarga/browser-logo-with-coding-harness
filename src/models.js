@@ -1,3 +1,17 @@
+// The SDK's live catalog uses named rate keys inside `costs`. Older API
+// examples use `cost.input`/`cost.output`. Both declare currency and token units.
+export function modelCost(model) {
+  if (model.cost) return model.cost;
+  const costs = model.costs;
+  if (!costs || typeof model.input_cost_key !== 'string' || typeof model.output_cost_key !== 'string') return null;
+  return {
+    currency: model.costs_currency,
+    tokens: costs.tokens,
+    input: costs[model.input_cost_key],
+    output: costs[model.output_cost_key]
+  };
+}
+
 // Puter reports token prices in USD cents for cost.tokens tokens.
 // Compare the same workload for every model: 1M input + 1M output tokens.
 export function modelPricing(cost) {
@@ -27,7 +41,7 @@ export function normalizeModels(catalog) {
       name: typeof entry.name === 'string' && entry.name.trim() ? entry.name.slice(0, 200) : id,
       provider: typeof entry.provider === 'string' ? entry.provider.slice(0, 100) : '',
       maxTokens: Number.isSafeInteger(entry.max_tokens) && entry.max_tokens > 0 ? entry.max_tokens : 12000,
-      pricing: modelPricing(entry.cost)
+      pricing: modelPricing(modelCost(entry))
     });
   }
   if (!models.size) throw new Error('Puter returned no available chat models. Try again.');

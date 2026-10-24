@@ -71,3 +71,16 @@ test('supplied Mona Lisa validates and draws within the canvas with the real tur
   assert.ok(points.every(([,x,y])=>Number.isFinite(x) && Number.isFinite(y) && Math.abs(x)<500 && Math.abs(y)<500));
   assert.equal(turtle.visible, false);
 });
+
+for (const file of ['pelican-bicycle-sol-6.1.logo', 'pelican-bicycle-luna-6.logo']) {
+  test(`${file} validates and draws within the canvas`, async () => {
+    const source=await readFile(new URL('../examples/'+file,import.meta.url),'utf8');
+    validateLogo(source);
+    const drawing=context(), turtle=new CanvasTurtle(drawing, context(), 1000, 1000);
+    await createInterpreter(turtle).run(source);
+    const points=drawing.operations.filter(op=>op[0]==='lineTo');
+    assert.ok(points.length>400);
+    assert.ok(points.every(([,x,y])=>Number.isFinite(x) && Number.isFinite(y) && Math.abs(x)<500 && Math.abs(y)<500));
+    assert.equal(turtle.visible,false);
+  });
+}

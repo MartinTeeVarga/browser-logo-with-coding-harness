@@ -147,3 +147,10 @@ Provider research references (2026-10-23):
 
 - Consolidated all established rules and the original agent entry-point guidance into the conventional root `AGENTS.md`. Removed the duplicate lowercase file and updated README/plan/progress references.
 - Verified the diff and references. Documentation-only change; application tests/build were not rerun.
+
+## Project license (2026-10-24)
+
+- Added the standard MIT license for original project code/documentation and MIT package metadata. Used the project contributor collective in the copyright line.
+- Kept modified jslogo files under Apache-2.0 and CodeMirror under its original MIT license. Added explicit jslogo modification notices and clarified license scope in README/THIRD_PARTY/AGENTS.
+- The static build now ships root LICENSE and THIRD_PARTY.md alongside the existing vendored license texts. Static build tests verify their presence and attribution.
+- Verification: static build tests and `npm run build` pass; no interpreter behavior changed. License texts were checked against the official MIT and Apache-2.0 sources, including Apache section 4 redistribution requirements.

@@ -13,6 +13,12 @@ test('static build has local assets and self-contained workers at any base path'
   assert.doesNotMatch(bundle, /import\.meta|^import /m);
   assert.match(bundle, /validationWorkerURL/);
   assert.match(bundle, /drawingWorkerURL/);
+  assert.match(await readFile('dist/LICENSE', 'utf8'), /MIT License/);
+  assert.match(await readFile('dist/THIRD_PARTY.md', 'utf8'), /Apache-2.0/);
+  assert.match(await readFile('dist/src/logo/vendor/APACHE-2.0.txt', 'utf8'), /TERMS AND CONDITIONS/);
+  assert.match(await readFile('dist/src/logo/vendor/LICENSE.md', 'utf8'), /Joshua Bell/);
+  assert.match(await readFile('dist/public/vendor/CODEMIRROR-LICENSE', 'utf8'), /Marijn Haverbeke/);
+  assert.match(bundle, /Modified for browser-logo, 2026/);
   execFileSync(process.execPath, ['--check', 'dist/app.js']);
 });
 

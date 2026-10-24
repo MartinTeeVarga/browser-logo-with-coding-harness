@@ -4,6 +4,9 @@ await mkdir('dist');
 for (const path of ['src', 'public']) {
   await cp(path, `dist/${path}`, { recursive: true });
 }
+for (const path of ['LICENSE', 'THIRD_PARTY.md']) {
+  await cp(path, `dist/${path}`);
+}
 // A tiny deterministic bundle keeps development dependency-free and lets the
 // interpreter also work when the built index.html is opened directly from disk.
 const read = path => readFile(path, 'utf8');

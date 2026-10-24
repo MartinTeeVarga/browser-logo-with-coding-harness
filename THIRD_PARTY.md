@@ -1,5 +1,9 @@
 # Third-party components
 
+The project's original code and documentation are licensed under the root [MIT License](LICENSE). Third-party files retain their existing licenses and copyright notices; the root MIT license does not replace those terms. In particular, both modified jslogo files remain Apache-2.0, including local changes. Distributing the combined application requires preserving the applicable MIT and Apache-2.0 texts and notices.
+
+The static build includes this document, the root MIT license, the full Apache-2.0 license and jslogo attribution, and CodeMirror's MIT license. Puter.js is fetched from its provider at runtime and is not relicensed by this project.
+
 ## jslogo
 
 Source: https://github.com/inexorabletash/jslogo (main, retrieved 2026-10-23).

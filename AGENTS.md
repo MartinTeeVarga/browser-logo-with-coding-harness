@@ -43,5 +43,6 @@ The original task and agreed plan are in [PLAN.md](PLAN.md). Keep [PROGRESS.md](
 - Preserve relative asset paths and GitHub Pages repository-subpath support.
 - Keep `PLAN.md` for the original task and agreed plan, and update `PROGRESS.md` with substantive changes and verification.
 - Run appropriate tests and the static build after functional changes. Distinguish mocked checks from live browser/model verification.
-- Preserve third-party notices and document modifications to vendored code.
+- License original project code/documentation under MIT. Keep modified jslogo files under Apache-2.0 and preserve CodeMirror's MIT license. Include license texts/attributions in static distributions.
+- Preserve third-party notices and document modifications to vendored code, including prominent change notices in Apache-licensed files.
 - Keep work in local Git and commit completed changes when requested. Do not publish or push merely because a local commit was requested.

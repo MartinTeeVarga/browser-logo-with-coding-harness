@@ -88,6 +88,10 @@ npm run build
 
 The tests cover interpreter semantics, turtle geometry, worker input/output, invalid code, runtime repair budgets, stale/concurrent edits, actual app event handlers with DOM/editor adapters, slow execution/source mapping, Puter SDK integration through mocks, and static build integrity. Browser visual review and live Puter account access must be checked in a real browser; neither was available in the build environment.
 
+## License
+
+Original project code and documentation are available under the [MIT License](LICENSE). Vendored jslogo files, including local modifications, remain under Apache-2.0; CodeMirror retains its MIT license. Keep their license texts and copyright notices when redistributing. See [THIRD_PARTY.md](THIRD_PARTY.md) for scope and attribution. The static build includes the required license documents. Puter.js and its hosted services remain subject to their provider's terms.
+
 ## Credits
 
 - Logo and turtle engine adapted from [Joshua Bell's jslogo](https://github.com/inexorabletash/jslogo), Apache 2.0. Local changes are listed in [THIRD_PARTY.md](THIRD_PARTY.md).

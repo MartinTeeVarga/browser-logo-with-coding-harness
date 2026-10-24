@@ -1,7 +1,7 @@
 import { cp, mkdir, rm, readFile, writeFile } from 'node:fs/promises';
 await rm('dist', { recursive: true, force: true });
 await mkdir('dist');
-for (const path of ['src', 'public']) {
+for (const path of ['src', 'public', 'examples']) {
   await cp(path, `dist/${path}`, { recursive: true });
 }
 for (const path of ['LICENSE', 'THIRD_PARTY.md']) {
@@ -19,7 +19,7 @@ const workers = `const validationWorkerURL = URL.createObjectURL(new Blob([${JSO
 let main = moduleBody(await read('src/main.js'))
   .replace("new URL('./logo/validate.worker.js', import.meta.url)", 'validationWorkerURL')
   .replace("new URL('./logo/draw.worker.js', import.meta.url)", 'drawingWorkerURL');
-const bundle = `(() => {\n'use strict';\n${runtime}\n${moduleBody(await read('src/harness.js'))}\n${moduleBody(await read('src/puter.js'))}\n${workers}\n${main}\n})();\n`;
+const bundle = `(() => {\n'use strict';\n${runtime}\n${moduleBody(await read('src/harness.js'))}\n${moduleBody(await read('src/models.js'))}\n${moduleBody(await read('src/puter.js'))}\n${moduleBody(await read('src/workspace.js'))}\n${moduleBody(await read('src/model-picker.js'))}\n${workers}\n${main}\n})();\n`;
 await writeFile('dist/app.js', bundle);
 await writeFile('dist/index.html', (await read('index.html')).replace('<script type="module" src="./src/main.js"></script>', '<script defer src="./app.js"></script>'));
 console.log('Built static site in dist/ — no server runtime required.');

@@ -60,3 +60,14 @@ test('corrected goulash runs with FILLED color and instruction inputs', async ()
   assert.ok(turtle.position.every(Number.isFinite));
   assert.equal(turtle.visible, false);
 });
+
+test('supplied Mona Lisa validates and draws within the canvas with the real turtle', async () => {
+  const source=await readFile(new URL('../examples/mona-lisa.logo',import.meta.url),'utf8');
+  validateLogo(source);
+  const drawing=context(), turtle=new CanvasTurtle(drawing, context(), 1000, 1000);
+  await createInterpreter(turtle).run(source);
+  const points=drawing.operations.filter(op=>op[0]==='lineTo');
+  assert.ok(points.length > 400);
+  assert.ok(points.every(([,x,y])=>Number.isFinite(x) && Number.isFinite(y) && Math.abs(x)<500 && Math.abs(y)<500));
+  assert.equal(turtle.visible, false);
+});

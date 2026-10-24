@@ -1,3 +1,5 @@
+import { normalizeModels } from './models.js';
+
 export const MODEL = 'openai/gpt-6-luna';
 
 export function getPuter() {
@@ -53,12 +55,27 @@ export function formatAllowance(allowance) {
   return `Puter · ${amount} remaining${percentText}`;
 }
 
-export async function generate(messages) {
+export async function loadModels() {
+  const puter = getPuter();
+  if (typeof puter.ai.listModels !== 'function') throw new Error('Puter model listing is unavailable. Reload the page and try again.');
+  let timeout;
+  try {
+    const catalog = await Promise.race([
+      puter.ai.listModels(),
+      new Promise((_, reject) => {timeout = setTimeout(() => reject(new Error('Model listing timed out. Try again.')), 15000);})
+    ]);
+    return normalizeModels(catalog);
+  } finally {clearTimeout(timeout);}
+}
+
+export async function generate(messages, model = MODEL, maxTokens = 12000) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(new Error('Puter took too long to respond. Try again.')), 120000);
   let result;
   try {
-    result = await getPuter().ai.chat(messages, { model: MODEL, reasoning_effort: 'medium', normalize: true, stream: false, max_tokens: 12000, signal: controller.signal });
+    const options = {model, normalize: true, stream: false, max_tokens: Math.min(12000, maxTokens), signal: controller.signal};
+    if (model === MODEL) options.reasoning_effort = 'medium';
+    result = await getPuter().ai.chat(messages, options);
   } finally { clearTimeout(timeout); }
   if (result?.error) throw result.error;
   if (result?.message?.tool_calls?.length) return ''; // Never execute a tool call.

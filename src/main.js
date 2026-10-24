@@ -1,7 +1,9 @@
 import { OutputBudget } from './logo/resources.js';
 import { primitiveNames } from './logo/runtime.js';
 import { basePrompt, replaceCode, repairCode, RuntimeRepairBudget } from './harness.js';
-import { connectPuter, generate, providerError, getRemainingAllowance, formatAllowance } from './puter.js';
+import { setupPanelDivider } from './workspace.js';
+import { setupModelPicker } from './model-picker.js';
+import { connectPuter, generate, providerError, getRemainingAllowance, formatAllowance, loadModels, MODEL } from './puter.js';
 
 const $ = id => document.getElementById(id);
 const STARTER = `; A little flower, ready to bloom.
@@ -77,6 +79,26 @@ let revision = 0, drawingWorker = null, running = false, watchdog, chatting = fa
 const history = [];
 const runtimeRepairBudget = new RuntimeRepairBudget();
 let pendingRunFailure = null, repairingRun = false, activeRun = null, activeLine = null;
+const defaultModel = {id: MODEL, name: 'GPT-6 Luna', maxTokens: 12000};
+let selectedModel = defaultModel;
+try {
+  const saved = JSON.parse(stored('logo.model.v1', 'null'));
+  if (saved && typeof saved.id === 'string' && saved.id.length > 0 && saved.id.length <= 512) {
+    selectedModel = {id:saved.id, name:typeof saved.name === 'string' ? saved.name.slice(0, 200) : saved.id,
+      maxTokens:Number.isSafeInteger(saved.maxTokens) && saved.maxTokens > 0 ? saved.maxTokens : 12000};
+  }
+} catch { /* Ignore an invalid saved preference. */ }
+let allowanceText = 'Your own Puter account. Your own AI allowance.';
+function renderAccountStatus(text = allowanceText) {
+  allowanceText = text;
+  $('chat-footnote').textContent = `${selectedModel.name} · ${text.replace(/^Puter · /, '')}`;
+}
+function modelGenerator() {
+  const model = selectedModel;
+  return messages => generate(messages, model.id, model.maxTokens);
+}
+renderAccountStatus();
+
 const savedSpeed = stored('logo.speed.v1', stored('logo.slow.v1', 'false') === 'true' ? '0' : '2');
 $('speed').value = ['0', '1', '2'].includes(savedSpeed) ? savedSpeed : '2';
 const drawingSpeed = () => ['slow', 'fast', 'instant'][Number($('speed').value)];
@@ -104,8 +126,49 @@ const readEditor = () => ({ source: editor.getValue(), revision });
 function commitSource(source, origin = 'ai') {
   editor.operation(() => editor.replaceRange(source, { line: 0, ch: 0 }, editor.posFromIndex(editor.getValue().length), origin));
 }
+setupPanelDivider({panels:$('panels'), divider:$('panel-divider'), editor, stored, save});
+const modelPicker = setupModelPicker({
+  dialog:$('model-dialog'), search:$('model-search'), list:$('model-list'), status:$('model-status'), retry:$('model-retry'),
+  loadModels, currentModel:() => selectedModel,
+  selectModel:model => {
+    selectedModel = model;
+    save('logo.model.v1', JSON.stringify({id:model.id, name:model.name, maxTokens:model.maxTokens}));
+    renderAccountStatus();
+  }
+});
+for (const name of ['model', 'about', 'examples']) {
+  document.querySelector(`[data-close="${name}-dialog"]`).addEventListener('click', () => $(`${name}-dialog`).close());
+}
+$('about-open').addEventListener('click', () => $('about-dialog').showModal());
+$('examples-open').addEventListener('click', () => $('examples-dialog').showModal());
+$('example-mona-lisa').addEventListener('click', async () => {
+  const snapshot = readEditor();
+  $('example-mona-lisa').disabled = true;
+  $('examples-status').textContent = 'Loading Mona Lisa…';
+  try {
+    const response = await fetch('./examples/mona-lisa.logo');
+    if (!response.ok) throw new Error('Could not load the example. Try again.');
+    const source = await response.text();
+    await validateInWorker(source);
+    if (revision !== snapshot.revision) throw new Error('You edited the code while the example was loading. Your changes are preserved. Choose the example again to replace them.');
+    commitSource(source, 'example');
+    setCollapsed(false);
+    $('examples-dialog').close();
+    status('Mona Lisa loaded. Press Run to draw it.');
+    $('examples-status').textContent = '';
+  } catch (error) {
+    $('examples-status').textContent = error.message;
+  } finally { $('example-mona-lisa').disabled = false; }
+});
+$('command-model').addEventListener('click', () => {
+  if (chatting) return;
+  $('message').value = ''; resizeComposer(); updateCommands();
+  void modelPicker.open();
+});
+
 function setChatBusy(value, isRuntimeRepair = false) {
   chatting = value;
+  if (value && $('model-dialog').open) $('model-dialog').close();
   repairingRun = value && isRuntimeRepair;
   $('send').disabled = value;
   $('run').disabled = repairingRun;
@@ -140,7 +203,7 @@ async function repairPendingRun() {
     const result = await repairCode({
       diagnostic, failedSnapshot: snapshot, history, prompt: basePrompt(names),
       readEditor, commit: source => commitSource(source, 'ai-repair'),
-      generate, validate: validateInWorker,
+      generate:modelGenerator(), validate: validateInWorker,
       maxAttempts: runtimeRepairBudget.remaining,
       onAttempt: () => runtimeRepairBudget.use(),
       onStatus: message => { $('chat-status').textContent = message; }
@@ -168,18 +231,18 @@ async function refreshAllowance() {
     const allowance = await getRemainingAllowance();
     if (request !== allowanceRequest) return;
     if (allowance) {
-      $('chat-footnote').textContent = formatAllowance(allowance);
+      renderAccountStatus(formatAllowance(allowance));
       $('chat-footnote').title = 'Remaining allowance for your whole Puter account, shared across apps. Updated after each chat request.';
     } else if (globalThis.puter?.auth?.isSignedIn?.()) {
-      $('chat-footnote').textContent = 'Puter · allowance unavailable';
+      renderAccountStatus('Puter · allowance unavailable');
       $('chat-footnote').title = 'Puter did not return a remaining allowance. You can still use chat.';
     } else {
-      $('chat-footnote').textContent = 'Your own Puter account. Your own AI allowance.';
+      renderAccountStatus('Your own Puter account. Your own AI allowance.');
       $('chat-footnote').title = '';
     }
   } catch {
     if (request !== allowanceRequest) return;
-    $('chat-footnote').textContent = 'Puter · allowance unavailable';
+    renderAccountStatus('Puter · allowance unavailable');
     $('chat-footnote').title = 'Could not read your remaining allowance. You can still use chat.';
   }
 }
@@ -196,6 +259,8 @@ editor.on('change', (_, change) => {
 });
 function setCollapsed(collapsed) {
   $('code-panel').classList.toggle('collapsed', collapsed);
+  $('panels').classList.toggle('code-collapsed', collapsed);
+  $('panel-divider').setAttribute('aria-hidden', String(collapsed));
   $('editor-body').hidden = collapsed;
   $('collapse').setAttribute('aria-expanded', String(!collapsed));
   $('collapse').setAttribute('aria-label', collapsed ? 'Expand code' : 'Collapse code');
@@ -329,8 +394,17 @@ function resizeComposer() {
   $('message').style.height = 'auto';
   $('message').style.height = Math.min($('message').scrollHeight, 120) + 'px';
 }
-$('message').addEventListener('input', resizeComposer);
+function updateCommands() {
+  const value = $('message').value.trim().toLowerCase();
+  $('slash-commands').hidden = !value.startsWith('/') || !'/model'.startsWith(value);
+}
+$('message').addEventListener('input', () => {resizeComposer(); updateCommands();});
 $('message').addEventListener('keydown', event => {
+  if (event.key === 'Escape') $('slash-commands').hidden = true;
+  if (event.key === 'Tab' && !$('slash-commands').hidden) {
+    event.preventDefault(); $('message').value = '/model'; updateCommands();
+    return;
+  }
   if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
     event.preventDefault(); $('composer').requestSubmit();
   }
@@ -339,6 +413,14 @@ $('composer').addEventListener('submit', async event => {
   event.preventDefault();
   const request = $('message').value.trim();
   if (!request || chatting) return;
+  if (request.startsWith('/')) {
+    $('message').value = ''; resizeComposer(); updateCommands();
+    const [command, ...query] = request.split(/\s+/);
+    if (command.toLowerCase() === '/model') await modelPicker.open(query.join(' '));
+    else bubble('Unknown command. Use /model to choose a model.', 'assistant error');
+    return;
+  }
+  $('slash-commands').hidden = true;
   setChatBusy(true);
   bubble(request, 'user');
   $('message').value = ''; resizeComposer();
@@ -350,12 +432,12 @@ $('composer').addEventListener('submit', async event => {
     $('connection-dot').classList.add('connected');
     $('connection-dot').title = 'Using your Puter account';
     $('connection-dot').setAttribute('aria-label', 'Puter connected');
-    $('chat-footnote').textContent = 'Connected to Puter · using your AI allowance';
+    renderAccountStatus('Connected to Puter · using your AI allowance');
     void refreshAllowance();
     const result = await replaceCode({
       request, history, prompt: basePrompt(names),
       readEditor, commit: commitSource,
-      generate, validate: validateInWorker,
+      generate:modelGenerator(), validate: validateInWorker,
       onStatus: message => { $('chat-status').textContent = message; }
     });
     history.push({ role: 'user', content: request }, { role: 'assistant', content: result.response });

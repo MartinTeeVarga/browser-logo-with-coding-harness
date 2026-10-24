@@ -71,3 +71,26 @@ test('usage preserves zero balances and does not round tiny balances to zero', (
   assert.equal(formatAllowance({ remaining: 0, total: 100, unit: 'credits' }), 'Puter · 0 credits remaining (0%)');
   assert.equal(formatAllowance({ remaining: 1, total: 2000000, unit: 'microcents' }), 'Puter · <$0.0001 remaining (<0.1%)');
 });
+
+test('selected models and output limits reach the provider without foreign reasoning options', async () => {
+  globalThis.puter = {auth:{},ai:{chat:async (messages, options) => {
+    assert.equal(options.model, 'anthropic/claude-test');
+    assert.equal(options.max_tokens, 4000);
+    assert.equal(options.reasoning_effort, undefined);
+    assert.equal(options.normalize, true);
+    assert.equal(messages[0].cache_control, undefined); // Caching was a question, not an implementation request.
+    return {message:{content:'A Logo explanation.'}};
+  }}};
+  try {assert.equal(await generate([{role:'system',content:'Logo'}], 'anthropic/claude-test', 4000), 'A Logo explanation.');}
+  finally {delete globalThis.puter;}
+});
+
+test('model catalog listing does not authenticate or generate and reports server failures', async () => {
+  globalThis.puter = {auth:{signIn:()=>assert.fail('Unexpected sign-in')},ai:{chat:()=>assert.fail('Unexpected generation'),listModels:async()=>[{id:'new/model',cost:{currency:'usd-cents',tokens:1000000,input:1,output:2}}]}};
+  try {
+    const {loadModels} = await import('../src/puter.js');
+    assert.equal((await loadModels())[0].id, 'new/model');
+    globalThis.puter.ai.listModels=async()=>{throw new Error('Catalog unavailable');};
+    await assert.rejects(loadModels(), /Catalog unavailable/);
+  } finally {delete globalThis.puter;}
+});

@@ -12,6 +12,10 @@ npm run dev
 
 Open `http://127.0.0.1:5173`. Press **Run** to draw the starter flower. Type a request into chat and press Enter; Puter opens its sign-in/authorization popup when needed. Shift+Enter adds a newline. AI edits remain unexecuted until Run. The editor supports undo, including AI replacements, and saves the code draft locally in the browser.
 
+Drag the divider between code and chat to choose their size ratio. It also supports Arrow Up/Down and Home/End when focused, and remembers your choice. Collapsing code temporarily hides the divider.
+
+The small turtle menu opens About, with a short explanation of Logo, authorship, and readable GitHub license links. **Examples → Mona Lisa** loads the supplied portrait program into the editor as an undoable change; press Run to draw it. The code is included at [examples/mona-lisa.logo](examples/mona-lisa.logo).
+
 The square canvas is anchored to the left. In landscape, it grows to fit the window height and the code/chat panels fill the remaining width, without a centered maximum-width wrapper. Square/portrait windows stack the panels below the canvas. The initial instruction reads “Press Run to try the code.”
 
 Run becomes Stop during execution. Programs run in a dedicated worker. Normal mode has a 15-second execution limit. The chat welcome invites drawing requests, code changes, and questions about Logo. A program that requests input gets an input field below the canvas; time spent awaiting input does not count toward that limit. Program output also appears below the canvas when needed.
@@ -48,9 +52,11 @@ Only AI chat requires internet access. The drawing engine, editor, styles, and s
 
 ## AI and code validation
 
-The Puter adapter uses `openai/gpt-6-luna` with medium reasoning, selected internally in `src/puter.js`. This model is listed in [Puter's model catalog](https://developer.puter.com/ai/models/). Puter's SDK is loaded from its official `https://js.puter.com/v2/` endpoint. Users authorize their own accounts; model usage and any repair attempts consume their individual Puter allowance. The app never buys credits or switches models automatically. Provider-owned upgrade or permission dialogs remain under the user's control.
+The default model is `openai/gpt-6-luna`. Type **`/model`** and press Enter to open a searchable chooser populated by [`puter.ai.listModels()`](https://docs.puter.com/AI/listModels/). All returned chat/completion models and explicit variants can be selected; there is no provider allowlist. `/model claude` opens with a search, and unknown slash commands are reported locally without an AI request. The selected model is saved in your browser and displayed before the remaining allowance. Each chat or runtime repair captures that model for all its attempts. The adapter keeps medium reasoning for the default Luna model, uses provider defaults for other selections, and respects smaller advertised output limits. It does not fall back silently if a model is unavailable. Puter's SDK is loaded from its official `https://js.puter.com/v2/` endpoint. Users authorize their own accounts; model usage and any repair attempts consume their individual Puter allowance. The app never buys credits or switches models automatically. Provider-owned upgrade or permission dialogs remain under the user's control.
 
 Chat can explain the current program, discuss drawing ideas, and teach Logo without changing the editor. The system prompt keeps conversation about Logo and steers unrelated requests toward a Logo activity. This topic steering relies on model behavior; the app does not claim a deterministic semantic filter for prose.
+
+Model prices come from the catalog’s `cost` metadata (USD cents per token block), normalized to USD per million tokens. The chooser labels **$** cheap (up to $2), **$$** reasonable (up to $15), and **$$$** expensive (above $15), comparing a fixed workload of 1M input plus 1M output tokens. Individual input/output rates are shown. These are comparison bands, not a quote for a chat message; zero token rates are identified as free, and missing/unsupported pricing is marked `?` rather than guessed. Listing does not itself generate a completion or intentionally sign the user in.
 
 The harness supplies recent conversation and the current editor snapshot. Replies use this convention:
 
@@ -77,7 +83,7 @@ When an explicit Run reports a program error, the app automatically sends the fa
 
 After sign-in, the chat footer shows the remaining allowance for the whole Puter account when available through [`getMonthlyUsage()`](https://docs.puter.com/Auth/getMonthlyUsage/). It refreshes after each request (including repairs/failures) and when the page regains focus. Explicit credit units are preserved; the documented microcent amounts are converted to USD. No token-count estimate is invented. If the lookup fails or is unsupported, the footer says the allowance is unavailable and chat continues normally. Signed-out users are never prompted to authenticate just for this status read.
 
-Chat messages, the current program, and repair diagnostics go directly from the browser to Puter. This project stores only code and collapse preference in local browser storage; it has no database or analytics.
+Chat messages, the current program, and repair diagnostics go directly from the browser to Puter. This project stores code, collapse/speed/panel-ratio preferences, and the selected model in local browser storage; it has no database or analytics.
 
 ## Verify
 

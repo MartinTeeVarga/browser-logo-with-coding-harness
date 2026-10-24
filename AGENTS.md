@@ -4,11 +4,12 @@ The original task and agreed plan are in [PLAN.md](PLAN.md). Keep [PROGRESS.md](
 
 ## Product and layout
 
-- Build a friendly, simple Logo drawing website. No navigation, decorative headings, or unrelated website sections.
+- Build a friendly, simple Logo drawing website without decorative headings or unrelated sections. The small application menu contains the turtle (About) and Examples. About explains Logo and credits/licenses; example selection loads editable code and never runs it. Link license documents to their readable GitHub pages.
 - Label the two panels exactly `code` and `chat`.
 - Keep the canvas square and anchored to the left. In landscape, code and chat use all remaining horizontal space. In square/portrait viewports, place the panels below the canvas.
 - Keep code editable, collapsible, and syntax-highlighted for the actual interpreter dialect.
-- Keep chat controls minimal: send on Enter; Shift+Enter inserts a newline. No model picker or extra chat tools.
+- Keep chat controls minimal: send on Enter; Shift+Enter inserts a newline. Slash commands are handled locally, starting with `/model` and a searchable model chooser. Do not send slash commands to the LLM.
+- Provide a draggable, keyboard-accessible divider between code and chat, preserving the preferred size ratio locally. Collapse temporarily hides the divider without losing that preference.
 - Keep the welcome mark, favicon, and animated turtle pen visually consistent: a minimal rounded turtle with an oval shell and geometric shell detail.
 - Use “code,” not “flower,” in the initial canvas instruction. The chat welcome invites drawing requests, code changes, and questions about Logo.
 - Provide a three-position speed slider beside Run: Slow (original pacing), Fast (one-tenth of the animation delays), and Instant (unpaced). Animated modes highlight/autoscroll the executing source line and use a visible turtle as the moving pen in its current color, without changing language results. Run shows a triangle while idle and a square while running.
@@ -26,7 +27,8 @@ The original task and agreed plan are in [PLAN.md](PLAN.md). Keep [PROGRESS.md](
 ## AI and harness
 
 - Use Puter with each user's own account and allowance. No application-owned shared quota or backend proxy.
-- The selected model is `openai/gpt-6-luna`, with medium reasoning. No silent model fallback.
+- Default to `openai/gpt-6-luna`. Let users select any chat/completion model in Puter’s live catalog using `/model`; persist the selection and print it before the allowance. No silent model fallback. Capture the selection for each request and all its repairs; pass model-specific reasoning options only to supported models.
+- Use reported token pricing for model cost bands: $ up to $2, $$ up to $15, $$$ above $15 for 1M input plus 1M output tokens. Show unknown pricing explicitly and actual rates when available; do not infer prices from names.
 - Keep chat about Logo: explanation, drawing ideas, debugging, and learning. Prompt the model to steer unrelated requests back to Logo.
 - Replies may contain conversational prose and optionally exactly one fenced `logo` block with the complete replacement program. No block means no editor change. Extract only the block contents, validate them as Logo, and keep explanations in chat. Reject foreign, untagged, multiple, empty, or malformed code blocks; never guess prose to be editor code.
 - Code repairs must return a corrected complete Logo block; prose alone cannot satisfy a repair. Topic steering for prose is a prompt instruction, not a deterministic semantic guarantee.

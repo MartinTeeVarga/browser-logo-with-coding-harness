@@ -3,19 +3,26 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
+import { normalizeModels } from '../src/models.js';
+import { MODEL } from '../src/puter.js';
 import { OutputBudget } from '../src/logo/resources.js';
 import { primitiveNames, validateLogo } from '../src/logo/runtime.js';
 import { basePrompt, replaceCode, repairCode, RuntimeRepairBudget } from '../src/harness.js';
 
 // Exercise the real app event handlers in a small DOM/editor adapter. No live
 // browser, auth session, model request, or drawing is involved in these tests.
-async function app(t, generate = async () => logoReply('fd 20')) {
+async function app(t, generate = async () => logoReply('fd 20'), options = {}) {
   class Element {
-    constructor() { this.value = ''; this.textContent = ''; this.style = {}; this.hidden = false; this.children = []; this.listeners = {}; this.classes = new Set(); this.classList = {toggle:(name,on)=>on?this.classes.add(name):this.classes.delete(name),add:name=>this.classes.add(name),remove:name=>this.classes.delete(name)}; }
+    constructor() { this.value = ''; this.textContent = ''; this.style = {setProperty:(key,value)=>{this.style[key]=value;}}; this.hidden = false; this.children = []; this.listeners = {}; this.classes = new Set(); this.classList = {toggle:(name,on)=>on?this.classes.add(name):this.classes.delete(name),add:name=>this.classes.add(name),remove:name=>this.classes.delete(name)}; }
     addEventListener(name, fn) { this.listeners[name] = fn; }
     emit(name, data = {}) { return this.listeners[name]?.({preventDefault() {}, ...data}); }
     setAttribute(name, value) { (this.attributes ||= {})[name] = value; } focus() {} remove() { this.removed = true; }
-    append(node) { this.children.push(node); }
+    append(...nodes) { this.children.push(...nodes); }
+    replaceChildren(...nodes) {this.children=nodes;}
+    getBoundingClientRect() {return {top:0,height:660};}
+    setPointerCapture() {}
+    showModal() {this.open=true;}
+    close() {this.open=false;}
     querySelector(selector) { return (this.selected ||= {})[selector] ||= new Element(); }
   }
   const nodes = new Map();
@@ -28,7 +35,11 @@ async function app(t, generate = async () => logoReply('fd 20')) {
     replaceRange:(text,from,to,origin)=>{source=text;change(editor,{origin});},
     addLineClass:line=>{marked=line;},removeLineClass:()=>{marked=null;},scrollIntoView:pos=>{scrolled=pos.line;}
   };
-  const workers = [], requests = [], windowEvents = {};
+  const workers = [], requests = [], windowEvents = {}, modelsUsed = [], saved = new Map(Object.entries(options.saved || {}));
+  const catalog = normalizeModels([
+    {id:MODEL,name:'GPT-6 Luna',cost:{currency:'usd-cents',tokens:1000000,input:10,output:50}},
+    {id:'anthropic/claude-test',name:'Claude Test',max_tokens:4000,cost:{currency:'usd-cents',tokens:1000000,input:500,output:2500}}
+  ]);
   class Worker {
     constructor(url) { this.url = String(url); this.messages = []; workers.push(this); }
     postMessage(data) {
@@ -44,22 +55,28 @@ async function app(t, generate = async () => logoReply('fd 20')) {
   const original = 'make "distance "oops\nfd :distance';
   const context = vm.createContext({
     console, URL, Worker, setTimeout, clearTimeout, queueMicrotask, OffscreenCanvas:class {},
-    primitiveNames, basePrompt, replaceCode, repairCode, RuntimeRepairBudget, OutputBudget,
-    connectPuter:()=>Promise.resolve(), generate:async messages=>{requests.push(messages);return generate(messages);},
+    primitiveNames, basePrompt, replaceCode, repairCode, RuntimeRepairBudget, OutputBudget, MODEL,
+    loadModels:options.loadModels || (async()=>catalog),
+    connectPuter:()=>Promise.resolve(), generate:async (messages,model,maxTokens)=>{requests.push(messages);modelsUsed.push({model,maxTokens});return generate(messages);},
     providerError:error=>error.message, getRemainingAllowance:async()=>null, formatAllowance:()=>'',
     puter:{auth:{isSignedIn:()=>true}},
     requestAnimationFrame:fn=>fn(), ResizeObserver:class {observe(){}},
-    localStorage:{getItem:key=>key==='logo.source.v1'?original:null,setItem(){}},
+    localStorage:{getItem:key=>key==='logo.source.v1'?original:saved.get(key)??null,setItem:(key,value)=>saved.set(key,value)},
+    fetch:options.fetch || (async()=>({ok:true,text:async()=>'fd 25'})),
     document:{getElementById:get,querySelector:()=>new Element(),createElement:()=>new Element(),body:new Element()},
     window:{addEventListener:(name,fn)=>{windowEvents[name]=fn;}},
     CodeMirror:{defineMode(){},fromTextArea:node=>{source=node.value;return editor;}}
   });
   const main = (await readFile(new URL('../src/main.js', import.meta.url),'utf8'))
     .replace(/^import .*;\n/gm,'').replaceAll('import.meta.url',JSON.stringify(new URL('../src/main.js',import.meta.url).href));
+  for (const path of ['workspace.js', 'model-picker.js']) {
+    const module = await readFile(new URL('../src/' + path, import.meta.url), 'utf8');
+    vm.runInContext(module.replace(/^export /gm, ''), context);
+  }
   vm.runInContext(main,context);
   t.after(()=>windowEvents.pagehide?.());
   return {
-    get,workers,requests,editor,source:()=>source,marked:()=>marked,scrolled:()=>scrolled,
+    get,workers,requests,modelsUsed,saved,editor,source:()=>source,marked:()=>marked,scrolled:()=>scrolled,
     edit:text=>{source=text;change(editor,{origin:'+input'});},
     drawing:()=>workers.filter(w=>w.url.includes('draw.worker')).at(-1)
   };
@@ -165,4 +182,97 @@ test('resource failures never trigger AI repair even if a worker marks them repa
   state.drawing().emit({...failure,code:'RESOURCE_LIMIT',message:'Allocation limit reached.'});
   assert.equal(state.requests.length, 0);
   assert.match(state.get('run-status').textContent, /Allocation/);
+});
+
+test('/model opens a live searchable chooser without an AI request and applies selection', async t => {
+  const state = await app(t);
+  state.get('message').value='/model Claude';
+  await state.get('composer').emit('submit');
+  assert.equal(state.get('model-dialog').open, true);
+  assert.equal(state.get('model-list').children.length, 1);
+  const option=state.get('model-list').children[0];
+  assert.equal(option.children[1].textContent, '$$$');
+  option.emit('click');
+  assert.equal(state.get('model-dialog').open, false);
+  assert.match(state.get('chat-footnote').textContent, /^Claude Test ·/);
+  assert.match(state.saved.get('logo.model.v1'), /anthropic\/claude-test/);
+  assert.equal(state.requests.length, 0);
+  state.get('message').value='What is Logo?';
+  await state.get('composer').emit('submit');
+  assert.deepEqual(state.modelsUsed[0], {model:'anthropic/claude-test',maxTokens:4000});
+});
+
+test('model picker search, unknown commands, and listing failures stay local', async t => {
+  const state=await app(t, undefined, {loadModels:async()=>{throw Error('Catalog down');}});
+  state.get('message').value='/m';state.get('message').emit('input');
+  assert.equal(state.get('slash-commands').hidden, false);
+  state.get('message').value='/unknown';await state.get('composer').emit('submit');
+  assert.match(state.get('messages').children.at(-1).textContent, /Unknown command/);
+  state.get('message').value='/model';await state.get('composer').emit('submit');
+  assert.equal(state.get('model-dialog').open, true);
+  assert.equal(state.get('model-retry').hidden, false);
+  assert.equal(state.get('model-status').textContent, 'Catalog down');
+  assert.equal(state.requests.length, 0);
+});
+
+test('divider supports pointer, keyboard, saved ratios, and collapsed code', async t => {
+  const state=await app(t);
+  const divider=state.get('panel-divider');
+  divider.emit('pointerdown',{button:0,pointerId:1});
+  divider.emit('pointermove',{pointerId:1,clientY:200});
+  assert.ok(Number(state.saved.get('logo.panel-ratio.v1')) < 0.4);
+  divider.emit('pointerup');
+  const before=state.saved.get('logo.panel-ratio.v1');
+  divider.emit('pointermove',{pointerId:1,clientY:500});
+  assert.equal(state.saved.get('logo.panel-ratio.v1'), before);
+  divider.emit('keydown',{key:'ArrowDown'});
+  assert.ok(Number(state.saved.get('logo.panel-ratio.v1')) > Number(before));
+  divider.emit('keydown',{key:'Home'});
+  assert.equal(divider.attributes['aria-valuenow'], divider.attributes['aria-valuemin']);
+  state.get('collapse').emit('click');
+  assert.equal(state.get('panels').classes.has('code-collapsed'), true);
+  assert.equal(divider.attributes['aria-hidden'], 'true');
+});
+
+test('menu opens About and examples; example replacement is validated and never executed', async t => {
+  const state=await app(t);
+  state.get('about-open').emit('click');assert.equal(state.get('about-dialog').open, true);
+  state.get('examples-open').emit('click');assert.equal(state.get('examples-dialog').open, true);
+  await state.get('example-mona-lisa').emit('click');
+  assert.equal(state.source(), 'fd 25');
+  assert.equal(state.get('examples-dialog').open, false);
+  assert.equal(state.workers.filter(worker=>worker.url.includes('draw.worker')).length, 0);
+  assert.equal(state.requests.length, 0);
+});
+
+test('loading an example preserves edits made during the fetch', async t => {
+  let resolve;
+  const state=await app(t, undefined, {fetch:()=>new Promise(done=>{resolve=done;})});
+  const loading=state.get('example-mona-lisa').emit('click');
+  state.edit('fd 99');
+  resolve({ok:true,text:async()=>'fd 25'});
+  await loading;
+  assert.equal(state.source(), 'fd 99');
+  assert.match(state.get('examples-status').textContent, /preserved/);
+});
+
+
+test('saved model and split preferences are restored on startup', async t => {
+  const model={id:'future/model:free',name:'Future model',maxTokens:3000};
+  const state=await app(t, undefined, {saved:{'logo.model.v1':JSON.stringify(model),'logo.panel-ratio.v1':'0.35'}});
+  assert.match(state.get('chat-footnote').textContent, /^Future model ·/);
+  assert.equal(state.get('panels').style['--code-size'], '0.35fr');
+  state.get('message').value='Explain Logo';await state.get('composer').emit('submit');
+  assert.deepEqual(state.modelsUsed[0], {model:model.id,maxTokens:3000});
+});
+
+test('validation repairs keep using the chosen model without a fallback', async t => {
+  let attempts=0;
+  const state=await app(t, async()=>++attempts===1?logoReply('fd [10]'):logoReply('fd 30'));
+  state.get('message').value='/model Claude';await state.get('composer').emit('submit');
+  state.get('model-list').children[0].emit('click');
+  state.get('message').value='Draw a line';await state.get('composer').emit('submit');
+  assert.equal(state.modelsUsed.length, 2);
+  assert.ok(state.modelsUsed.every(model=>model.model==='anthropic/claude-test'));
+  assert.equal(state.source(), 'fd 30');
 });

@@ -28,5 +28,9 @@ test('page includes manual Run and simple accessible code/chat controls', async 
   assert.match(html, /id="code-title">code</);
   assert.match(html, /id="chat-title">chat</);
   assert.match(html, /aria-controls="editor-body"/);
-  assert.doesNotMatch(html, /<nav\b/);
+  assert.match(html, /<nav class="app-menu"/);
+  assert.match(html, /id="panel-divider"[^>]*role="separator"/);
+  assert.match(html, /id="model-dialog"/);
+  assert.match(html, /href="https:\/\/github.com\/MartinTeeVarga\/browser-logo-with-coding-harness\/blob\/main\/THIRD_PARTY.md"/);
+  assert.match(await readFile('dist/examples/mona-lisa.logo', 'utf8'), /to polygon/);
 });

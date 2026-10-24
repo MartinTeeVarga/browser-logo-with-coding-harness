@@ -14,6 +14,10 @@
     <script type="module" src="./src/main.js"></script>
   </head>
   <body>
+    <nav class="app-menu" aria-label="Application menu">
+      <button id="about-open" type="button" class="turtle-menu" aria-label="About this Logo interpreter"><img src="./public/turtle.svg" alt="" width="32" height="32"></button>
+      <button id="examples-open" type="button">Examples</button>
+    </nav>
     <main class="workspace">
       <section class="drawing" aria-label="Logo drawing">
         <div class="paper" id="paper">
@@ -40,22 +44,46 @@
           <button type="submit" aria-label="Submit program input">↵</button>
         </form>
       </section>
-      <aside class="panels">
+      <aside class="panels" id="panels">
         <section class="code-panel panel" id="code-panel" aria-labelledby="code-title">
           <header class="panel-header"><h1 id="code-title">code</h1><button type="button" id="collapse" class="icon-button" aria-label="Collapse code" aria-expanded="true" aria-controls="editor-body"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="m4 10 4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button></header>
           <div id="editor-body" class="editor-body"><label class="sr-only" for="code">Logo code</label><textarea id="code" spellcheck="false"></textarea></div>
         </section>
-        <section class="chat-panel panel" aria-labelledby="chat-title">
+        <div id="panel-divider" class="panel-divider" role="separator" tabindex="0" aria-label="Resize code and chat panels" aria-orientation="horizontal" aria-controls="code-panel chat-panel"></div>
+        <section id="chat-panel" class="chat-panel panel" aria-labelledby="chat-title">
           <header class="panel-header"><h2 id="chat-title">chat</h2><span class="connection-dot" id="connection-dot" title="Connect to Puter by sending a message" aria-label="Puter not connected"></span></header>
           <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions text">
-            <div class="welcome" id="welcome"><span class="sparkle" aria-hidden="true">✳</span><p>What shall we draw?</p><span>Describe a drawing, change the code,<br>or ask me about Logo.</span></div>
+            <div class="welcome" id="welcome"><span class="sparkle" aria-hidden="true">✳</span><p>What shall we draw?</p><span>Describe a drawing, change the code,<br>or ask me about Logo.<br>Type /model to choose your AI.</span></div>
           </div>
           <div class="chat-status" id="chat-status" role="status"></div>
+          <div id="slash-commands" class="slash-commands" hidden><button id="command-model" type="button"><strong>/model</strong><span>Choose a model</span></button></div>
           <form class="composer" id="composer"><label class="sr-only" for="message">Message</label><textarea id="message" rows="1" placeholder="Ask about Logo or describe a drawing…" autocomplete="off" maxlength="10000"></textarea><button type="submit" id="send" aria-label="Send message"><svg viewBox="0 0 20 20" width="19" height="19" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></form>
           <p class="chat-footnote" id="chat-footnote">Your own Puter account. Your own AI allowance.</p>
         </section>
       </aside>
     </main>
+    <dialog id="model-dialog" class="app-dialog model-dialog" aria-labelledby="model-title">
+      <header><h2 id="model-title">Choose a model</h2><button type="button" class="dialog-close" data-close="model-dialog" aria-label="Close model chooser">×</button></header>
+      <label class="sr-only" for="model-search">Search models</label><input id="model-search" class="model-search" type="search" placeholder="Search models or providers…" autocomplete="off">
+      <p class="price-guide">$ cheap · $$ reasonable · $$$ expensive</p>
+      <p class="price-details">Bands compare 1M input + 1M output tokens: $ up to $2, $$ up to $15, $$$ above $15. Actual cost depends on usage. ? means pricing unavailable.</p>
+      <p id="model-status" role="status"></p><button id="model-retry" type="button" hidden>Try again</button>
+      <div id="model-list" class="model-list" role="group" aria-label="Available Puter models"></div>
+    </dialog>
+    <dialog id="about-dialog" class="app-dialog" aria-labelledby="about-title">
+      <header><h2 id="about-title">About Logo</h2><button type="button" class="dialog-close" data-close="about-dialog" aria-label="Close About">×</button></header>
+      <p>A browser-based Logo interpreter, with an AI collaborator to help you draw and learn.</p>
+      <p>Logo is a programming language for exploring ideas through code. Give a turtle instructions to move, turn, and draw; use loops, procedures, and lists to build more complex pictures and discover how programs work.</p>
+      <p>Created by Martin, with programming assistance from OpenAI Codex.</p>
+      <p>© 2026 browser-logo contributors. Original project code is <a href="https://github.com/MartinTeeVarga/browser-logo-with-coding-harness/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT licensed</a>. The Logo engine is adapted from Joshua Bell’s jslogo (Apache-2.0); the editor uses CodeMirror by Marijn Haverbeke and others (MIT). AI access uses Puter.js and its hosted services.</p>
+      <p><a href="https://github.com/MartinTeeVarga/browser-logo-with-coding-harness/blob/main/THIRD_PARTY.md" target="_blank" rel="noopener noreferrer">Third-party credits and licenses</a></p>
+    </dialog>
+    <dialog id="examples-dialog" class="app-dialog" aria-labelledby="examples-title">
+      <header><h2 id="examples-title">Examples</h2><button type="button" class="dialog-close" data-close="examples-dialog" aria-label="Close examples">×</button></header>
+      <p>Choose an example to replace the editor’s code, then press Run. You can undo the replacement.</p>
+      <button type="button" id="example-mona-lisa" class="example-option">Mona Lisa<span>A portrait made from polygons, ovals, and lines.</span></button>
+      <p id="examples-status" role="status"></p>
+    </dialog>
     <noscript>This drawing space needs JavaScript enabled.</noscript>
   </body>
 </html>

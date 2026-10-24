@@ -10,7 +10,7 @@ The original requested interface:
 2. An editable code window, below the canvas for square/portrait viewports and to its right for landscape viewports. The code window is collapsible and has Logo syntax highlighting.
 3. A chat window where AI writes and changes the code.
 
-Use only the panel labels **code** and **chat**. Do not add navigation, decorative website headings, or extra chat controls. Enter sends a chat message. Code runs only when the user presses **Run**, never when the AI changes it.
+Use only the panel labels **code** and **chat**. The original interface omitted navigation, decorative website headings, and extra chat controls; the later small menu and slash-command requirements below supersede that restriction. Enter sends a chat message. Code runs only when the user presses **Run**, never when the AI changes it.
 
 The coding harness reads the current editor contents and can only change code in that editor. The original contract required the model to return only Logo source (superseded by the conversational reply convention below). Its base prompt must enforce that contract. Validate candidate Logo before applying it; if invalid, send diagnostics back and retry up to three times, then fail visibly and preserve the previous code.
 
@@ -20,7 +20,9 @@ The initial provider proposal was Gemini with a free tier and browser sign-in. T
 
 - Use **Berkeley Logo**, excluding native OS, filesystem, hardware, and desktop integration features. Full non-native conformance remains the goal; do not silently reduce this to turtle-only Logo.
 - Use **Puter.js** so each user authorizes their own account and consumes their own allowance. No shared application quota, backend proxy, or manually copied API keys.
-- Use **GPT-6 Luna**, currently `openai/gpt-6-luna`, with medium reasoning. Do not fall back to another model silently.
+- Default to **GPT-6 Luna**, currently `openai/gpt-6-luna`. The `/model` slash command opens a live Puter chat-model chooser, with reported-price $/$$/$$$ bands and saved selection shown before the allowance. No silent fallback.
+- Add a draggable/keyboard-accessible separator between code and chat and persist their size ratio.
+- Add a small turtle/About and Examples menu. About describes Logo and credits/licenses; link license files on GitHub. Start examples with the user-supplied Mona Lisa, loading code without execution.
 - The entire deployed site must be static and support GitHub Pages, including repository subpaths. Node is permitted for local development, tests, and builds.
 - Keep the design friendly and simple. Anchor the canvas at the left; in landscape, code and chat fill all horizontal space remaining beside the square canvas.
 - The initial canvas message says **“Press Run to try the code.”**
@@ -42,6 +44,7 @@ The initial provider proposal was Gemini with a free tier and browser sign-in. T
 - [x] Add left-aligned layout, flexible remaining panel width, corrected empty-state text, and account allowance display.
 - [x] Add runtime error repair, FILLED signature validation, and a corrected goulash regression example.
 - [x] Add Slow mode with source mapping through procedures/nested loops, interpolated turtle movement, and a visible execution cursor.
+- [x] Add the resizable separator, local slash-command/model chooser, model/allowance footer, and About/Examples menu with Mona Lisa.
 - [x] Add this plan and consolidate project rules and agent instructions in `AGENTS.md`.
 - [x] Address audited allocation/output weaknesses with speed-independent resource budgets, cumulative output/message limits, batching, and host-side output checks. Prefer simple, readable security code.
 - [ ] Complete full non-native Berkeley conformance; see `docs/COMPATIBILITY.md` for specific gaps.

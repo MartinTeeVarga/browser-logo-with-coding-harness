@@ -9,7 +9,7 @@ Confirmed by user: Berkeley Logo is the language reference; native features are 
 
 - Square drawing canvas takes most available page space.
 - Editable, collapsible panel labeled `code`: right of canvas in landscape; below it in square/portrait viewports. Proposed landscape breakpoint: viewport aspect ratio > 1.2, subject to visual review.
-- Panel labeled `chat`: below code in the landscape sidebar; below canvas/code in portrait. Input sends on Enter; Shift+Enter inserts a newline. No model picker, attachment tools, navigation, or decorative labels.
+- Panel labeled `chat`: below code in the landscape sidebar; below canvas/code in portrait. Input sends on Enter; Shift+Enter inserts a newline. Local `/model` chooser and a small About/Examples menu; no attachment tools or decorative labels.
 - Logo syntax highlighting. `Run` explicitly executes the current editor contents; AI edits never execute code.
 - AI-backed chat reads current code and changes only editor code through a narrow browser harness.
 - Reject invalid model output before modifying the editor. Retry repairs up to three times after the initial response, then report failure in chat and preserve code.
@@ -19,7 +19,7 @@ Confirmed by user: Berkeley Logo is the language reference; native features are 
 1. **Language reference (confirmed):** Use the Berkeley Logo (UCBLogo) manual as the pinned compatibility reference, excluding native features. This is a substantial interpreter project, beyond turtle commands. Inventory every primitive and semantic feature before choosing to port an existing interpreter or implement one. Inspect reuse licenses first.
 2. **Browser limits (confirmed):** Exclude native features such as OS shell commands and native filesystem/device integrations. Record excluded primitives in the compatibility matrix and return clear unsupported-feature diagnostics. Any virtual file operations need a separate explicit definition; native adapters are outside scope.
 3. **Authentication constraints (confirmed):** Browser-only application; each user authorizes their own provider account and consumes their own allowance. Shared Firebase/Gemini project quota and a custom server proxy are rejected.
-4. **AI provider (confirmed):** Use Puter.js browser sign-in and authorization against each user's own Puter allowance. No application backend, shared quota, or manually copied API keys. Verify the complete browser flow, available model quality, and allowance-exhaustion behavior during the initial integration. Select one model internally; no model picker. Do not initiate paid upgrades automatically.
+4. **AI provider (confirmed):** Use Puter.js browser sign-in and authorization against each user's own Puter allowance. No application backend, shared quota, or manually copied API keys. Verify the complete browser flow, available model quality, and allowance-exhaustion behavior during the initial integration. Default to Luna and allow selection from the live chat-model catalog via `/model`. Do not initiate paid upgrades automatically.
 5. **Validation limits:** Parsing and available static checks can reject malformed Logo and obvious errors. Dynamic instruction lists, generated procedures, and runtime values prevent a guarantee that every accepted program will execute successfully. Runtime diagnostics appear only after Run.
 
 ### User onboarding (confirmed: Puter.js)
@@ -36,7 +36,7 @@ Firebase/shared quota is rejected. OpenRouter is an evaluated alternative, not p
 - [x] Integrate the Apache-licensed jslogo engine in a worker; extend it with Berkeley boolean words, protected quoted words, macros, cascade/transfer, goto/tag, pause/continue, stepping, special variables, and source-preserving FULLTEXT.
 - [x] Add a non-executing worker validator using the engine reader/compiler, including procedure bodies and literal instruction templates.
 - [x] Build the code replacement harness with current-source snapshots, three repair retries, atomic commits, revision conflict detection, and editor undo.
-- [x] Connect the documented Puter browser SDK interface with system messages, a fixed text model, synchronous popup initiation, own-account usage, and provider error handling. Test these interfaces with mocks.
+- [x] Connect the documented Puter browser SDK interface with system messages, a text model (now user-selectable), synchronous popup initiation, own-account usage, and provider error handling. Test these interfaces with mocks.
 - [x] Add worker drawing/output/input, Stop, a 15-second execution bound, and local draft persistence.
 - [x] Produce dependency-free Node development/build scripts and a relative-path static bundle. Include an optional manually triggered GitHub Pages workflow; no publication performed.
 - [x] Record primitive inventory and compatibility gaps in `docs/COMPATIBILITY.md` and `docs/primitives.json`.
@@ -166,3 +166,12 @@ Provider research references (2026-10-23):
 - Confirmed the existing `main` branch remains the publishing branch. Added a push trigger for every change to `main`, retaining manual workflow dispatch and the test/build gates.
 - Updated README deployment instructions and retained the previous successful Pages setup record. The Pages environment already allows `main`.
 - Local diff checks pass. Pushing this workflow change also exercises the automatic deployment path on GitHub.
+
+## Resizable panels, model chooser, and application menu (2026-10-24)
+
+- Added a pointer/touch and keyboard separator between code and chat at landscape and portrait sizes. It clamps the split to usable panel heights, remembers the ratio, and works with code collapse/expand. Small focused modules keep layout and model-dialog behavior separate from the main app.
+- Added local slash-command handling with `/model`, optional search text, and a command suggestion. The searchable chooser queries Puter’s live chat/completion catalog without a model allowlist or completion call. It saves selection and lists actual input/output token rates with documented $/$$/$$$ comparison thresholds; unsupported/missing prices show `?`.
+- The selected model appears before account allowance, including error/unavailable states. Chat and runtime repairs capture the selection; only the known default Luna model receives its medium reasoning option; other selections use provider defaults. Smaller advertised output limits are respected and no silent fallback was added.
+- Added the turtle/About and Examples menu. About explains Logo and credits Martin, OpenAI Codex programming assistance, jslogo, CodeMirror, and Puter. License/third-party links open readable GitHub files. The exact supplied Mona Lisa source is bundled as a static example; loading validates and applies an undoable editor replacement, preserving edits made during loading and waiting for manual Run.
+- Caching was researched only, per user instruction. No prompt/response caching, cache-control flags, context compaction, or history behavior was added or changed.
+- Verification: all 167 automated tests pass and static build succeeds. Tests cover price normalization/unknowns, catalog and provider routing, local commands/error handling, saved model/split state, pointer/keyboard resize, menus, example edit conflicts/manual execution, static assets, and Mona Lisa with the actual turtle engine. Computer-use permission was denied; visual browser review and live Puter model catalog/generation remain unverified here.

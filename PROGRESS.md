@@ -154,3 +154,15 @@ Provider research references (2026-10-23):
 - Kept modified jslogo files under Apache-2.0 and CodeMirror under its original MIT license. Added explicit jslogo modification notices and clarified license scope in README/THIRD_PARTY/AGENTS.
 - The static build now ships root LICENSE and THIRD_PARTY.md alongside the existing vendored license texts. Static build tests verify their presence and attribution.
 - Verification: static build tests and `npm run build` pass; no interpreter behavior changed. License texts were checked against the official MIT and Apache-2.0 sources, including Apache section 4 redistribution requirements.
+
+## GitHub Pages deployment (2026-10-24)
+
+- Configured Pages using `gh api` with `build_type=workflow`; HTTPS enforcement is enabled.
+- Ran the existing `pages.yml` workflow on `main`. Build/tests and deployment succeeded: https://github.com/MartinTeeVarga/browser-logo-with-coding-harness/actions/runs/40090704951.
+- Verified HTTP 200 at https://martinteevarga.github.io/browser-logo-with-coding-harness/ and confirmed the published HTML loads the static app bundle. Live Puter authentication/model behavior and visual browser review were not exercised.
+
+## Automatic Pages updates (2026-10-24)
+
+- Confirmed the existing `main` branch remains the publishing branch. Added a push trigger for every change to `main`, retaining manual workflow dispatch and the test/build gates.
+- Updated README deployment instructions and retained the previous successful Pages setup record. The Pages environment already allows `main`.
+- Local diff checks pass. Pushing this workflow change also exercises the automatic deployment path on GitHub.

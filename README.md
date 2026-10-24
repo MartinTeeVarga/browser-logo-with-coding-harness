@@ -40,7 +40,7 @@ npm run build
 
 Upload the **contents of `dist/`** to GitHub Pages or any static host. All application asset paths are relative, so both a custom domain and a repository subpath such as `/browser-logo/` work. There is no server endpoint, environment variable, application API key, or shared inference quota.
 
-For GitHub Pages, a manually triggered workflow is included at `.github/workflows/pages.yml`. In the repository's Pages settings, select **GitHub Actions** as the source, then run the workflow. The repository owner controls publication; this project has not been deployed by the coding agent.
+GitHub Pages is deployed by `.github/workflows/pages.yml` on every push to `main`, after tests and the static build pass. You can also run **Actions → Publish static Logo site → Run workflow** manually. Pages uses **GitHub Actions** as its publishing source. The live site is https://martinteevarga.github.io/browser-logo-with-coding-harness/.
 
 `npm run preview` serves the built site locally. You can also open `dist/index.html` directly to use the interpreter, but **Puter authentication requires HTTP localhost or HTTPS hosting**, not a `file://` origin.
 

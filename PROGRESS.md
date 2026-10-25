@@ -226,3 +226,10 @@ Provider research references (2026-10-23):
 - Replaced the separate Repair / Not now panel with a lowercase “fix” action, styled as an underlined link inside the interpreter error message. It is a keyboard-accessible button because it starts a repair rather than navigating. Its tooltip/accessibility label identifies the selected model.
 - Clicking fix remains explicit approval; leaving it alone makes no request. Existing stale-code guards, selected-model capture, cancellation, validation, and manual execution remain in place. Updated the current rules, plan, and README.
 - Verification: all 186 tests pass and the static build succeeds. App-event tests exercise the inline action, ignoring it, model selection, and dismissal. No live browser/provider verification performed.
+
+## Repository history privacy cleanup (2026-10-26)
+
+- Replaced an absolute local repository path with a generic description in every historical revision of this document.
+- Rewrote existing author and committer metadata to use the account-specific GitHub noreply address. Configured the same address locally for future commits in this repository; global Git settings are unchanged.
+- Verified all rewritten commit contents, messages, and author/committer metadata for the removed values. Application code is unchanged; the existing 186-test/static-build results still apply.
+- Publishing uses an explicit force-with-lease against the previously checked remote main revision. Existing clones must be reset or cloned again to follow the rewritten history; remote caches and copies outside this repository are not erased by a branch rewrite.

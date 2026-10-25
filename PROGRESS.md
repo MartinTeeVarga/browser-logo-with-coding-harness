@@ -194,3 +194,14 @@ Provider research references (2026-10-23):
 - Replaced the Sol 6.1 pelican with the user’s updated version: the left leg and foot are drawn before the wheels/frame, placing them behind the bicycle. The Examples description and README explicitly credit Luna’s draw-order adjustment to the Sol illustration.
 - Included the pending Luna 6 example and live catalog pricing fix in the requested commit/push.
 - Verification: all 171 automated tests pass and static build succeeds; both pelican sources validate and run with the real turtle engine.
+
+## Direct GitHub menu link (2026-10-25)
+
+- Added a direct GitHub repository link alongside Examples, styled to match the top menu. It opens in a new tab with opener protection and keyboard focus styling.
+- Verified static build tests and `npm run build`; no interpreter or chat behavior changed.
+
+## Enterprise example (2026-10-25)
+
+- Added the supplied USS Enterprise NCC-1701 top-view program unchanged to Examples. It uses the shared loader, validates before insertion, supports undo, and waits for Run.
+- Included the pending direct GitHub menu link in the requested commit/push.
+- Verification: all 172 automated tests pass, including validation and actual turtle execution of Enterprise within canvas bounds. Static build succeeds and packages the example.

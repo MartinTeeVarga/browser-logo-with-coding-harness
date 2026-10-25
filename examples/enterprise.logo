@@ -1,0 +1,208 @@
+; USS ENTERPRISE NCC-1701
+; Top view - saucer above, nacelles below
+
+to go :x :y
+  pu
+  setxy :x :y
+  pd
+end
+
+to poly :color :points
+  pu
+  setpos first :points
+  pd
+  setpc "#304757
+  setpensize 1
+  filled :color [
+    foreach butfirst :points [setpos ?]
+    setpos first :points
+  ]
+end
+
+to disc :x :y :r :color
+  go :x (:y + :r)
+  seth 92.5
+  setpc "#304757
+  setpensize 1
+  filled :color [
+    repeat 72 [
+      fd (2 * :r * sin 2.5)
+      rt 5
+    ]
+  ]
+end
+
+to ring :x :y :r :color
+  go :x :y
+  setpc :color
+  setpensize 1
+  arc 360 :r
+end
+
+to seam :a
+  go (77 * sin :a) (105 + 77 * cos :a)
+  setpos (list (91 * sin :a) (105 + 91 * cos :a))
+end
+
+to enterprise
+  cs
+  ht
+  window
+
+  ; PYLONS CONNECTING WARP NACELLES
+
+  poly "#8296a5 [
+    [-22 -105] [-90 -64]
+    [-90 -91] [-27 -147]
+  ]
+
+  poly "#8296a5 [
+    [22 -105] [90 -64]
+    [90 -91] [27 -147]
+  ]
+
+  ; NECK BELOW THE SAUCER
+
+  poly "#a4b9c5 [
+    [-16 12] [16 12]
+    [14 -70] [-14 -70]
+  ]
+
+  poly "#d9e4e9 [
+    [-8 10] [8 10]
+    [7 -67] [-7 -67]
+  ]
+
+  ; SECONDARY ENGINEERING HULL
+
+  poly "#8aa1b0 [
+    [0 -32] [18 -39]
+    [27 -60] [32 -103]
+    [29 -141] [23 -175]
+    [11 -192] [0 -198]
+    [-11 -192] [-23 -175]
+    [-29 -141] [-32 -103]
+    [-27 -60] [-18 -39]
+  ]
+
+  poly "#c8d6df [
+    [0 -43] [13 -50]
+    [19 -75] [22 -128]
+    [15 -167] [0 -179]
+    [-15 -167] [-22 -128]
+    [-19 -75] [-13 -50]
+  ]
+
+  poly "#8ba3b2 [
+    [-5 -58] [5 -58]
+    [5 -155] [-5 -155]
+  ]
+
+  disc 0 -175 9 "#587b95
+  disc 0 -175 5 "#b2d5e5
+
+  ; LEFT WARP NACELLE
+
+  poly "#829cab [
+    [-95 -42] [-85 -45]
+    [-80 -56] [-80 -204]
+    [-86 -215] [-104 -215]
+    [-110 -204] [-110 -56]
+    [-105 -45]
+  ]
+
+  poly "#d5e1e7 [
+    [-104 -59] [-94 -55]
+    [-94 -203] [-104 -205]
+  ]
+
+  poly "#58778b [
+    [-89 -67] [-84 -67]
+    [-84 -194] [-89 -194]
+  ]
+
+  disc -95 -49 12 "#a84c52
+  disc -95 -49 8 "#de7b68
+  disc -95 -207 7 "#769fbc
+
+  ; RIGHT WARP NACELLE
+
+  poly "#829cab [
+    [95 -42] [105 -45]
+    [110 -56] [110 -204]
+    [104 -215] [86 -215]
+    [80 -204] [80 -56]
+    [85 -45]
+  ]
+
+  poly "#d5e1e7 [
+    [104 -59] [94 -55]
+    [94 -203] [104 -205]
+  ]
+
+  poly "#58778b [
+    [89 -67] [84 -67]
+    [84 -194] [89 -194]
+  ]
+
+  disc 95 -49 12 "#a84c52
+  disc 95 -49 8 "#de7b68
+  disc 95 -207 7 "#769fbc
+
+  ; MAIN SAUCER SECTION
+
+  disc 0 105 100 "#849eac
+  disc 0 105 95 "#becfd8
+  disc 0 105 90 "#d9e4e9
+
+  ; CONCENTRIC HULL PANEL RINGS
+
+  ring 0 105 96 "#557487
+  ring 0 105 76 "#8199a8
+  ring 0 105 58 "#a8bac5
+  ring 0 105 43 "#829dac
+
+  ; RADIAL SAUCER PANEL SEAMS
+
+  setpc "#9fb3bf
+  setpensize 1
+  repeat 12 [
+    seam (30 * (repcount - 1))
+  ]
+
+  ; INNER SAUCER SUPERSTRUCTURE
+
+  disc 0 105 29 "#b1c6d2
+  ring 0 105 23 "#6f8c9e
+
+  ; BRIDGE MODULE
+
+  disc 0 105 13 "#7293a7
+  disc 0 105 9 "#dce9ed
+  disc 0 105 4 "#587c93
+
+  ; REGISTRATION MARKING
+
+  setpc "#354e61
+  setlabelheight 11
+  go -30 48
+  label "NCC-1701
+
+  ; FINAL DETAILS
+
+  setpc "#536e80
+  setpensize 2
+  go -17 -79
+  setxy -17 -111
+  go 17 -79
+  setxy 17 -111
+
+  go -12 -145
+  setxy -8 -160
+  go 12 -145
+  setxy 8 -160
+
+  ht
+end
+
+enterprise

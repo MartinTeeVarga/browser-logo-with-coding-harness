@@ -4,7 +4,7 @@ The original task and agreed plan are in [PLAN.md](PLAN.md). Keep [PROGRESS.md](
 
 ## Product and layout
 
-- Build a friendly, simple Logo drawing website without decorative headings or unrelated sections. The small application menu contains the turtle (About) and Examples. About explains Logo and credits/licenses; example selection loads editable code and never runs it. Link license documents to their readable GitHub pages.
+- Build a friendly, simple Logo drawing website without decorative headings or unrelated sections. The small application menu contains the turtle (About), Examples, and a direct GitHub repository link without a submenu. About explains Logo and credits/licenses; example selection loads editable code and never runs it. Link license documents to their readable GitHub pages.
 - Label the two panels exactly `code` and `chat`.
 - Keep the canvas square and anchored to the left. In landscape, code and chat use all remaining horizontal space. In square/portrait viewports, place the panels below the canvas.
 - Keep code editable, collapsible, and syntax-highlighted for the actual interpreter dialect.

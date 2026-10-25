@@ -72,7 +72,7 @@ test('supplied Mona Lisa validates and draws within the canvas with the real tur
   assert.equal(turtle.visible, false);
 });
 
-for (const file of ['pelican-bicycle-sol-6.1.logo', 'pelican-bicycle-luna-6.logo']) {
+for (const file of ['pelican-bicycle-sol-6.1.logo', 'pelican-bicycle-luna-6.logo', 'enterprise.logo']) {
   test(`${file} validates and draws within the canvas`, async () => {
     const source=await readFile(new URL('../examples/'+file,import.meta.url),'utf8');
     validateLogo(source);

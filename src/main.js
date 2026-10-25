@@ -144,7 +144,8 @@ $('examples-open').addEventListener('click', () => $('examples-dialog').showModa
 const examples = [
   {button:'example-mona-lisa', name:'Mona Lisa', file:'mona-lisa.logo'},
   {button:'example-pelican-sol', name:'Pelican on a bicycle (Sol 6.1)', file:'pelican-bicycle-sol-6.1.logo'},
-  {button:'example-pelican-luna', name:'Pelican on a bicycle (Luna 6)', file:'pelican-bicycle-luna-6.logo'}
+  {button:'example-pelican-luna', name:'Pelican on a bicycle (Luna 6)', file:'pelican-bicycle-luna-6.logo'},
+  {button:'example-enterprise', name:'USS Enterprise NCC-1701', file:'enterprise.logo'}
 ];
 async function loadExample(example) {
   const snapshot = readEditor();

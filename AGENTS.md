@@ -8,6 +8,7 @@ The original task and agreed plan are in [PLAN.md](PLAN.md). Keep [PROGRESS.md](
 - Label the two panels exactly `code` and `chat`.
 - Keep the canvas square and anchored to the left. In landscape, code and chat use all remaining horizontal space. In square/portrait viewports, place the panels below the canvas.
 - Keep code editable, collapsible, and syntax-highlighted for the actual interpreter dialect.
+- Replace Send with Stop while an AI request is active, including authentication, validation, and repairs. Cancel provider requests where possible, discard late results, stop follow-up attempts, preserve editor/drafts, and restore Send afterward. Enter in the composer must not accidentally stop an active request.
 - Keep chat controls minimal: send on Enter; Shift+Enter inserts a newline. Slash commands are handled locally, starting with `/model` and a searchable model chooser. Do not send slash commands to the LLM.
 - Provide a draggable, keyboard-accessible divider between code and chat, preserving the preferred size ratio locally. Collapse temporarily hides the divider without losing that preference.
 - Keep the welcome mark, favicon, and animated turtle pen visually consistent: a minimal rounded turtle with an oval shell and geometric shell detail.
@@ -27,7 +28,7 @@ The original task and agreed plan are in [PLAN.md](PLAN.md). Keep [PROGRESS.md](
 ## AI and harness
 
 - Use Puter with each user's own account and allowance. No application-owned shared quota or backend proxy.
-- Default to `openai/gpt-6-luna`. Let users select any chat/completion model in Puter’s live catalog using `/model`; persist the selection and print it before the allowance. No silent model fallback. Capture the selection for each request and all its repairs; pass model-specific reasoning options only to supported models.
+- Default to `openai/gpt-6-luna`. The `/model` dialog defaults to a Latest tab for explicitly reviewed current GPT-6/6.1, Claude, Gemini, Mistral, Grok, DeepSeek, and Kimi families; the All tab retains every chat/completion model in the live catalog. Family membership is not a Logo quality certification. Review the explicit family list as new generations ship; persist the selection and print it before the allowance. No silent model fallback. Capture the selection for each request and all its repairs; pass model-specific reasoning options only to supported models.
 - Use reported token pricing for model cost bands: $ up to $2, $$ up to $15, $$$ above $15 for 1M input plus 1M output tokens. Show unknown pricing explicitly and actual rates when available; do not infer prices from names.
 - Keep chat about Logo: explanation, drawing ideas, debugging, and learning. Prompt the model to steer unrelated requests back to Logo.
 - Replies may contain conversational prose and optionally exactly one fenced `logo` block with the complete replacement program. No block means no editor change. Extract only the block contents, validate them as Logo, and keep explanations in chat. Reject foreign, untagged, multiple, empty, or malformed code blocks; never guess prose to be editor code.

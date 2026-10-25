@@ -1,3 +1,4 @@
+import { throwIfAborted, waitForResult } from './cancellation.js';
 import { normalizeModels } from './models.js';
 
 export const MODEL = 'openai/gpt-6-luna';
@@ -68,15 +69,22 @@ export async function loadModels() {
   } finally {clearTimeout(timeout);}
 }
 
-export async function generate(messages, model = MODEL, maxTokens = 12000) {
+export async function generate(messages, model = MODEL, maxTokens = 12000, signal = null) {
+  throwIfAborted(signal);
   const controller = new AbortController();
+  const cancel = () => controller.abort(signal.reason);
+  signal?.addEventListener('abort', cancel, {once:true});
   const timeout = setTimeout(() => controller.abort(new Error('Puter took too long to respond. Try again.')), 120000);
   let result;
   try {
     const options = {model, normalize: true, stream: false, max_tokens: Math.min(12000, maxTokens), signal: controller.signal};
     if (model === MODEL) options.reasoning_effort = 'medium';
-    result = await getPuter().ai.chat(messages, options);
-  } finally { clearTimeout(timeout); }
+    result = await waitForResult(getPuter().ai.chat(messages, options), controller.signal);
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener('abort', cancel);
+  }
+  throwIfAborted(signal);
   if (result?.error) throw result.error;
   if (result?.message?.tool_calls?.length) return ''; // Never execute a tool call.
   if (['length', 'content_filter'].includes(result?.finish_reason)) return '';

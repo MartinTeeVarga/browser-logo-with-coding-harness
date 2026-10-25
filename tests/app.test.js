@@ -3,7 +3,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
-import { normalizeModels } from '../src/models.js';
+import { stoppedError, throwIfAborted, waitForResult } from '../src/cancellation.js';
+import { normalizeModels, isLatestModel } from '../src/models.js';
 import { MODEL } from '../src/puter.js';
 import { OutputBudget } from '../src/logo/resources.js';
 import { primitiveNames, validateLogo } from '../src/logo/runtime.js';
@@ -38,7 +39,8 @@ async function app(t, generate = async () => logoReply('fd 20'), options = {}) {
   const workers = [], requests = [], windowEvents = {}, modelsUsed = [], saved = new Map(Object.entries(options.saved || {}));
   const catalog = normalizeModels([
     {id:MODEL,name:'GPT-6 Luna',cost:{currency:'usd-cents',tokens:1000000,input:10,output:50}},
-    {id:'anthropic/claude-test',name:'Claude Test',max_tokens:4000,cost:{currency:'usd-cents',tokens:1000000,input:500,output:2500}}
+    {id:'anthropic/claude-sonnet-5-5',name:'Claude Test',max_tokens:4000,cost:{currency:'usd-cents',tokens:1000000,input:500,output:2500}},
+    {id:'sao10k/l3.3-70b-euryale-v2.3',name:'Euryale',cost:{currency:'usd-cents',tokens:1000000,input:85,output:85}}
   ]);
   class Worker {
     constructor(url) { this.url = String(url); this.messages = []; workers.push(this); }
@@ -57,8 +59,9 @@ async function app(t, generate = async () => logoReply('fd 20'), options = {}) {
     console, URL, Worker, setTimeout, clearTimeout, queueMicrotask, OffscreenCanvas:class {},
     primitiveNames, basePrompt, replaceCode, repairCode, RuntimeRepairBudget, OutputBudget, MODEL,
     loadModels:options.loadModels || (async()=>catalog),
-    connectPuter:()=>Promise.resolve(), generate:async (messages,model,maxTokens)=>{requests.push(messages);modelsUsed.push({model,maxTokens});return generate(messages);},
-    providerError:error=>error.message, getRemainingAllowance:async()=>null, formatAllowance:()=>'',
+    connectPuter:options.connectPuter || (()=>Promise.resolve()), generate:async (messages,model,maxTokens,signal)=>{requests.push(messages);modelsUsed.push({model,maxTokens});return generate(messages, signal);},
+    providerError:error=>error.message,
+    AbortController, stoppedError, throwIfAborted, waitForResult, isLatestModel, getRemainingAllowance:async()=>null, formatAllowance:()=>'',
     puter:{auth:{isSignedIn:()=>true}},
     requestAnimationFrame:fn=>fn(), ResizeObserver:class {observe(){}},
     localStorage:{getItem:key=>key==='logo.source.v1'?original:saved.get(key)??null,setItem:(key,value)=>saved.set(key,value)},
@@ -71,7 +74,7 @@ async function app(t, generate = async () => logoReply('fd 20'), options = {}) {
     .replace(/^import .*;\n/gm,'').replaceAll('import.meta.url',JSON.stringify(new URL('../src/main.js',import.meta.url).href));
   for (const path of ['workspace.js', 'model-picker.js']) {
     const module = await readFile(new URL('../src/' + path, import.meta.url), 'utf8');
-    vm.runInContext(module.replace(/^export /gm, ''), context);
+    vm.runInContext(module.replace(/^import .*;\n/gm, '').replace(/^export /gm, ''), context);
   }
   vm.runInContext(main,context);
   t.after(()=>windowEvents.pagehide?.());
@@ -195,11 +198,11 @@ test('/model opens a live searchable chooser without an AI request and applies s
   option.emit('click');
   assert.equal(state.get('model-dialog').open, false);
   assert.match(state.get('chat-footnote').textContent, /^Claude Test ·/);
-  assert.match(state.saved.get('logo.model.v1'), /anthropic\/claude-test/);
+  assert.match(state.saved.get('logo.model.v1'), /anthropic\/claude-sonnet-5-5/);
   assert.equal(state.requests.length, 0);
   state.get('message').value='What is Logo?';
   await state.get('composer').emit('submit');
-  assert.deepEqual(state.modelsUsed[0], {model:'anthropic/claude-test',maxTokens:4000});
+  assert.deepEqual(state.modelsUsed[0], {model:'anthropic/claude-sonnet-5-5',maxTokens:4000});
 });
 
 test('model picker search, unknown commands, and listing failures stay local', async t => {
@@ -273,6 +276,76 @@ test('validation repairs keep using the chosen model without a fallback', async 
   state.get('model-list').children[0].emit('click');
   state.get('message').value='Draw a line';await state.get('composer').emit('submit');
   assert.equal(state.modelsUsed.length, 2);
-  assert.ok(state.modelsUsed.every(model=>model.model==='anthropic/claude-test'));
+  assert.ok(state.modelsUsed.every(model=>model.model==='anthropic/claude-sonnet-5-5'));
   assert.equal(state.source(), 'fd 30');
+});
+
+test('Send becomes Stop, cancels a reply, preserves a new draft, and accepts another request', async t => {
+  let resolve, calls=0;
+  const state=await app(t, ()=>++calls===1?new Promise(done=>{resolve=done;}):Promise.resolve(logoReply('fd 40')));
+  const original=state.source();
+  state.get('message').value='Draw something';
+  const pending=state.get('composer').emit('submit');
+  await settled(()=>state.requests.length===1);
+  assert.equal(state.get('send').type,'button');
+  assert.equal(state.get('send').attributes['aria-label'],'Stop response generation');
+  assert.equal(state.get('send').querySelector('path').attributes.d,'M5 5h10v10H5z');
+  state.get('message').value='New draft';
+  state.get('send').emit('click');
+  await pending;
+  assert.equal(state.source(),original);
+  assert.equal(state.get('message').value,'New draft');
+  assert.equal(state.get('send').type,'submit');
+  assert.equal(state.get('send').attributes['aria-label'],'Send message');
+  resolve(logoReply('fd 99'));await new Promise(done=>setImmediate(done));
+  assert.equal(state.source(),original);
+  await state.get('composer').emit('submit');
+  assert.equal(state.source(),'fd 40');
+});
+
+test('Stop while connecting prevents a later authentication result starting a generation', async t => {
+  let connected;
+  const state=await app(t, undefined, {connectPuter:()=>new Promise(resolve=>{connected=resolve;})});
+  state.get('message').value='Draw';
+  const pending=state.get('composer').emit('submit');
+  state.get('send').emit('click');
+  await pending;
+  connected();await Promise.resolve();
+  assert.equal(state.requests.length,0);
+  assert.equal(state.get('send').type,'submit');
+});
+
+test('model tabs default to Latest, search within each list, and reopen on Latest', async t => {
+  const state=await app(t);
+  state.get('message').value='/model';await state.get('composer').emit('submit');
+  assert.equal(state.get('model-list').children.length,2);
+  assert.equal(state.get('models-latest-tab').attributes['aria-selected'],'true');
+  state.get('model-search').value='Euryale';state.get('model-search').emit('input');
+  assert.equal(state.get('model-list').children.length,0);
+  state.get('models-all-tab').emit('click');
+  assert.equal(state.get('model-list').children.length,1);
+  assert.equal(state.get('models-all-tab').attributes['aria-selected'],'true');
+  state.get('models-all-tab').emit('keydown',{key:'ArrowLeft'});
+  assert.equal(state.get('model-list').children.length,0);
+  state.get('model-dialog').close();
+  state.get('message').value='/model';await state.get('composer').emit('submit');
+  assert.equal(state.get('model-list').children.length,2);
+  assert.equal(state.requests.length,0);
+});
+
+test('Stop cancels automatic runtime repair without applying its late result or restarting repair', async t => {
+  let resolve;
+  const state=await app(t, ()=>new Promise(done=>{resolve=done;}));
+  const original=state.source();
+  await state.get('run').emit('click');
+  state.drawing().emit(failure);
+  await settled(()=>state.requests.length===1);
+  assert.equal(state.get('run').disabled,true);
+  state.get('send').emit('click');
+  await settled(()=>state.get('send').type==='submit');
+  assert.equal(state.get('run').disabled,false);
+  resolve(logoReply('fd 99'));
+  await new Promise(done=>setImmediate(done));
+  assert.equal(state.source(),original);
+  assert.equal(state.requests.length,1);
 });

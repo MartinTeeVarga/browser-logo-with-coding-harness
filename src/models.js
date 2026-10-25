@@ -38,6 +38,7 @@ export function normalizeModels(catalog) {
     if (models.has(id)) continue;
     models.set(id, {
       id,
+      aliases: Array.isArray(entry.aliases) ? entry.aliases.filter(alias => typeof alias === 'string' && alias.length <= 512) : [],
       name: typeof entry.name === 'string' && entry.name.trim() ? entry.name.slice(0, 200) : id,
       provider: typeof entry.provider === 'string' ? entry.provider.slice(0, 100) : '',
       maxTokens: Number.isSafeInteger(entry.max_tokens) && entry.max_tokens > 0 ? entry.max_tokens : 12000,
@@ -46,4 +47,28 @@ export function normalizeModels(catalog) {
   }
   if (!models.size) throw new Error('Puter returned no available chat models. Try again.');
   return [...models.values()].sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+}
+
+// Current families reviewed against Puter's live catalog on 2026-10-25.
+// Keep this explicit: these are recent families, not a Logo quality rating.
+// New generations stay available in All until this list is reviewed.
+const LATEST_FAMILIES = [
+  'gpt-6', 'gpt-6.1',
+  'claude-opus-5-5', 'claude-opus-5.5',
+  'claude-sonnet-5-5', 'claude-sonnet-5.5',
+  'claude-haiku-5-5', 'claude-haiku-5.5',
+  'claude-fable-5-1', 'claude-fable-5.1',
+  'gemini-4-argon', 'gemini-3.8-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-pro',
+  'mistral-large-4', 'mistral-medium-2604', 'mistral-medium-3-5', 'mistral-medium-3.5',
+  'mistral-small-2603', 'devstral-2512',
+  'grok-4.7', 'deepseek-v4.1-flash', 'deepseek-v4-1-flash', 'deepseek-v4-pro',
+  'kimi-k3', 'kimi-k3.1'
+];
+const latestPatterns = LATEST_FAMILIES.map(family =>
+  new RegExp('(?:^|[/:])' + family.replaceAll('.', '\\.') + '(?:$|[-:])', 'i')
+);
+
+export function isLatestModel(model) {
+  const names = [model.id, ...(model.aliases || [])];
+  return names.some(name => latestPatterns.some(pattern => pattern.test(name)));
 }

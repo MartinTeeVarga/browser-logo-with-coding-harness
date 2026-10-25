@@ -135,3 +135,35 @@ test('validation resource limits are terminal rather than consuming repair calls
   await assert.rejects(replaceCode(state.options), error => error.code==='RESOURCE_LIMIT');
   assert.equal(calls, 1); assert.equal(state.commits(), 0);
 });
+
+test('Stop discards a late provider result and never validates or commits it', async () => {
+  let resolve;
+  const controller=new AbortController();
+  const state=setup(()=>new Promise(done=>{resolve=done;}));
+  state.options.validate=()=>assert.fail('Stopped generation must not be validated');
+  const result=replaceCode({...state.options,signal:controller.signal});
+  controller.abort();
+  await assert.rejects(result,error=>error.name==='AbortError');
+  resolve(logoReply('fd 88'));
+  await Promise.resolve();
+  assert.equal(state.commits(),0);
+});
+
+test('Stop during validation preserves the editor and prevents validation retries', async () => {
+  const controller=new AbortController();
+  let finishValidation, calls=0, started;
+  const ready=new Promise(resolve=>{started=resolve;});
+  const state=setup(async()=>{calls++;return logoReply('fd 88');});
+  state.options.validate=()=>new Promise(resolve=>{finishValidation=resolve;started();});
+  const result=replaceCode({...state.options,signal:controller.signal});
+  await ready;controller.abort();
+  await assert.rejects(result,error=>error.name==='AbortError');
+  finishValidation();await Promise.resolve();
+  assert.equal(calls,1);assert.equal(state.commits(),0);
+});
+
+test('an already stopped request never calls the provider', async () => {
+  const state=setup(()=>assert.fail('Stopped request must not start'));
+  const controller=new AbortController();controller.abort();
+  await assert.rejects(replaceCode({...state.options,signal:controller.signal}),error=>error.name==='AbortError');
+});

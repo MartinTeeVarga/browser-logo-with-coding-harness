@@ -94,3 +94,16 @@ test('model catalog listing does not authenticate or generate and reports server
     await assert.rejects(loadModels(), /Catalog unavailable/);
   } finally {delete globalThis.puter;}
 });
+
+test('Stop forwards cancellation to Puter and returns even if the SDK ignores it', async () => {
+  let resolve, providerSignal;
+  const controller=new AbortController();
+  globalThis.puter={auth:{},ai:{chat:(messages,options)=>{providerSignal=options.signal;return new Promise(done=>{resolve=done;});}}};
+  try {
+    const result=generate([],MODEL,12000,controller.signal);
+    controller.abort();
+    await assert.rejects(result,error=>error.name==='AbortError');
+    assert.equal(providerSignal.aborted,true);
+    resolve({message:{content:'late response'}});
+  } finally {delete globalThis.puter;}
+});

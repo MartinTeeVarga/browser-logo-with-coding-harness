@@ -1,3 +1,4 @@
+import { stoppedError, throwIfAborted, waitForResult } from './cancellation.js';
 import { OutputBudget } from './logo/resources.js';
 import { primitiveNames } from './logo/runtime.js';
 import { basePrompt, replaceCode, repairCode, RuntimeRepairBudget } from './harness.js';
@@ -76,6 +77,7 @@ editor.getInputField().setAttribute('aria-label', 'Logo code');
 editor.getWrapperElement().setAttribute('role', 'group');
 editor.getWrapperElement().setAttribute('aria-label', 'Editable Logo code');
 let revision = 0, drawingWorker = null, running = false, watchdog, chatting = false;
+let chatController = null;
 const history = [];
 const runtimeRepairBudget = new RuntimeRepairBudget();
 let pendingRunFailure = null, repairingRun = false, activeRun = null, activeLine = null;
@@ -93,9 +95,9 @@ function renderAccountStatus(text = allowanceText) {
   allowanceText = text;
   $('chat-footnote').textContent = `${selectedModel.name} · ${text.replace(/^Puter · /, '')}`;
 }
-function modelGenerator() {
+function modelGenerator(signal) {
   const model = selectedModel;
-  return messages => generate(messages, model.id, model.maxTokens);
+  return messages => generate(messages, model.id, model.maxTokens, signal);
 }
 renderAccountStatus();
 
@@ -128,6 +130,7 @@ function commitSource(source, origin = 'ai') {
 }
 setupPanelDivider({panels:$('panels'), divider:$('panel-divider'), editor, stored, save});
 const modelPicker = setupModelPicker({
+  latestTab:$('models-latest-tab'), allTab:$('models-all-tab'),
   dialog:$('model-dialog'), search:$('model-search'), list:$('model-list'), status:$('model-status'), retry:$('model-retry'),
   loadModels, currentModel:() => selectedModel,
   selectModel:model => {
@@ -181,11 +184,26 @@ function setChatBusy(value, isRuntimeRepair = false) {
   chatting = value;
   if (value && $('model-dialog').open) $('model-dialog').close();
   repairingRun = value && isRuntimeRepair;
-  $('send').disabled = value;
+  if (value) chatController = new AbortController();
+  else chatController = null;
+  $('send').disabled = false;
+  $('send').type = value ? 'button' : 'submit';
+  $('send').setAttribute('aria-label', value ? 'Stop response generation' : 'Send message');
+  $('send').title = value ? 'Stop response generation' : 'Send message';
+  const icon = $('send').querySelector('path');
+  icon.setAttribute('d', value ? 'M5 5h10v10H5z' : 'M10 15V5m-4 4 4-4 4 4');
+  icon.setAttribute('fill', value ? 'currentColor' : 'none');
+  icon.setAttribute('stroke', value ? 'none' : 'currentColor');
   $('run').disabled = repairingRun;
   document.body.classList.toggle('is-busy', value);
   if (!value) $('chat-status').textContent = '';
 }
+$('send').addEventListener('click', event => {
+  if (!chatting) return;
+  event.preventDefault();
+  pendingRunFailure = null;
+  chatController.abort(stoppedError());
+});
 function queueRunRepair(snapshot, diagnostic) {
   if (revision !== snapshot.revision || editor.getValue() !== snapshot.source) {
     bubble('The program failed, but you have edited the code since Run. Your changes are safe. Run the current code to check it.');
@@ -209,12 +227,13 @@ async function repairPendingRun() {
     return;
   }
   setChatBusy(true, true);
+  const signal = chatController.signal;
   bubble(`The interpreter reported “${diagnostic.message}”${diagnostic.procedure ? ` in ${diagnostic.procedure}` : ''}. Repairing the code…`);
   try {
     const result = await repairCode({
       diagnostic, failedSnapshot: snapshot, history, prompt: basePrompt(names),
       readEditor, commit: source => commitSource(source, 'ai-repair'),
-      generate:modelGenerator(), validate: validateInWorker,
+      signal, generate:modelGenerator(signal), validate:source => validateInWorker(source, signal),
       maxAttempts: runtimeRepairBudget.remaining,
       onAttempt: () => runtimeRepairBudget.use(),
       onStatus: message => { $('chat-status').textContent = message; }
@@ -228,7 +247,8 @@ async function repairPendingRun() {
     if (result.reply) bubble(result.reply);
     bubble('The code is repaired and validated. Press Run to try it.');
   } catch (error) {
-    bubble(['validation', 'conflict', 'repair_limit'].includes(error.code) ? error.message : providerError(error), 'assistant error');
+    if (error.name === 'AbortError') bubble(error.message);
+    else bubble(['validation', 'conflict', 'repair_limit'].includes(error.code) ? error.message : providerError(error), 'assistant error');
   } finally {
     setChatBusy(false);
     void refreshAllowance();
@@ -282,18 +302,22 @@ setCollapsed(stored('logo.collapsed.v1', 'false') === 'true');
 $('collapse').addEventListener('click', () => setCollapsed(!$('editor-body').hidden));
 new ResizeObserver(() => editor.refresh()).observe($('code-panel'));
 
-function validateInWorker(source) {
+function validateInWorker(source, signal = null) {
+  throwIfAborted(signal);
   return new Promise((resolve, reject) => {
     const worker = new Worker(new URL('./logo/validate.worker.js', import.meta.url), { type: 'module' });
     const finish = (message, code) => {
       clearTimeout(timeout);
       worker.terminate();
+      signal?.removeEventListener('abort', cancel);
       if (message) {
         const error = new Error(message);
         error.code = code;
         reject(error);
       } else resolve();
     };
+    const cancel = () => finish('Stopped. Your code is preserved.', 'cancelled');
+    signal?.addEventListener('abort', cancel, {once:true});
     const timeout = setTimeout(() => finish('Logo validation took too long.'), 4000);
     worker.onmessage = ({ data }) => finish(data.valid ? null : data.error, data.code);
     worker.onerror = () => finish('The Logo validator could not start. Refresh the page and try again.');
@@ -417,7 +441,8 @@ $('message').addEventListener('keydown', event => {
     return;
   }
   if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
-    event.preventDefault(); $('composer').requestSubmit();
+    event.preventDefault();
+    if (!chatting) $('composer').requestSubmit();
   }
 });
 $('composer').addEventListener('submit', async event => {
@@ -433,13 +458,15 @@ $('composer').addEventListener('submit', async event => {
   }
   $('slash-commands').hidden = true;
   setChatBusy(true);
+  const signal = chatController.signal;
   bubble(request, 'user');
   $('message').value = ''; resizeComposer();
   try {
     $('chat-status').textContent = 'Connecting to your Puter account…';
     // Do not await anything before this popup-triggering call.
     const connected = connectPuter();
-    await connected;
+    await waitForResult(connected, signal);
+    throwIfAborted(signal);
     $('connection-dot').classList.add('connected');
     $('connection-dot').title = 'Using your Puter account';
     $('connection-dot').setAttribute('aria-label', 'Puter connected');
@@ -448,7 +475,7 @@ $('composer').addEventListener('submit', async event => {
     const result = await replaceCode({
       request, history, prompt: basePrompt(names),
       readEditor, commit: commitSource,
-      generate:modelGenerator(), validate: validateInWorker,
+      signal, generate:modelGenerator(signal), validate:source => validateInWorker(source, signal),
       onStatus: message => { $('chat-status').textContent = message; }
     });
     history.push({ role: 'user', content: request }, { role: 'assistant', content: result.response });
@@ -456,9 +483,10 @@ $('composer').addEventListener('submit', async event => {
     if (result.reply) bubble(result.reply);
     if (result.source !== null) bubble('The code is ready. Press Run to see it.');
   } catch (error) {
-    bubble(error.code === 'validation' || error.code === 'conflict' ? error.message : providerError(error), 'assistant error');
+    if (error.name === 'AbortError') bubble(error.message);
+    else bubble(error.code === 'validation' || error.code === 'conflict' ? error.message : providerError(error), 'assistant error');
     // Keep failed requests handy; the next Enter retries explicitly.
-    if (!$('message').value) { $('message').value = request; resizeComposer(); }
+    if (error.name !== 'AbortError' && !$('message').value) { $('message').value = request; resizeComposer(); }
   } finally {
     setChatBusy(false); $('message').focus();
     // Includes validation repairs and failed requests that may have consumed
@@ -469,4 +497,4 @@ $('composer').addEventListener('submit', async event => {
 });
 
 // Rendering starts only through Run. Restoring a source draft never executes it.
-window.addEventListener('pagehide', () => { drawingWorker?.terminate(); clearTimeout(watchdog); });
+window.addEventListener('pagehide', () => { chatController?.abort(stoppedError()); drawingWorker?.terminate(); clearTimeout(watchdog); });

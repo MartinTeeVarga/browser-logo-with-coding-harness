@@ -21,6 +21,8 @@ The initial provider proposal was Gemini with a free tier and browser sign-in. T
 - Use **Berkeley Logo**, excluding native OS, filesystem, hardware, and desktop integration features. Full non-native conformance remains the goal; do not silently reduce this to turtle-only Logo.
 - Use **Puter.js** so each user authorizes their own account and consumes their own allowance. No shared application quota, backend proxy, or manually copied API keys.
 - Default to **GPT-6 Luna**, currently `openai/gpt-6-luna`. The `/model` slash command opens a live Puter chat-model chooser, with reported-price $/$$/$$$ bands and saved selection shown before the allowance. No silent fallback.
+- Replace Send with Stop during AI work, including authentication, validation, and repairs. Cancellation preserves drafts/code and prevents late updates or further repair calls; provider billing may still apply to started requests.
+- Default the chooser to Latest current GPT-6/6.1, Claude, Gemini, Mistral, Grok, DeepSeek, and Kimi families, while retaining the full catalog in All. Treat this as a reviewed family list, not an evaluated quality guarantee.
 - Add a draggable/keyboard-accessible separator between code and chat and persist their size ratio.
 - Add a small turtle/About and Examples menu. About describes Logo and credits/licenses; link license files on GitHub. Start examples with the user-supplied Mona Lisa, loading code without execution.
 - The entire deployed site must be static and support GitHub Pages, including repository subpaths. Node is permitted for local development, tests, and builds.
@@ -44,6 +46,7 @@ The initial provider proposal was Gemini with a free tier and browser sign-in. T
 - [x] Add left-aligned layout, flexible remaining panel width, corrected empty-state text, and account allowance display.
 - [x] Add runtime error repair, FILLED signature validation, and a corrected goulash regression example.
 - [x] Add Slow mode with source mapping through procedures/nested loops, interpolated turtle movement, and a visible execution cursor.
+- [x] Add cancellable AI generation with a Send/Stop button and Latest/All model tabs, including current Kimi families.
 - [x] Add the resizable separator, local slash-command/model chooser, model/allowance footer, and About/Examples menu with Mona Lisa.
 - [x] Add this plan and consolidate project rules and agent instructions in `AGENTS.md`.
 - [x] Address audited allocation/output weaknesses with speed-independent resource budgets, cumulative output/message limits, batching, and host-side output checks. Prefer simple, readable security code.

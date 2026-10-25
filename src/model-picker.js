@@ -1,11 +1,15 @@
-export function setupModelPicker({dialog, search, list, status, retry, loadModels, currentModel, selectModel}) {
+import { isLatestModel } from './models.js';
+
+export function setupModelPicker({dialog, search, list, status, retry, loadModels, currentModel, selectModel, latestTab, allTab}) {
   let models = [];
   let request = 0;
+  let tab = 'latest';
 
   function render() {
     list.replaceChildren();
     const query = search.value.trim().toLowerCase();
-    const matches = models.filter(model => `${model.name} ${model.id} ${model.provider}`.toLowerCase().includes(query));
+    const available = tab === 'latest' ? models.filter(isLatestModel) : models;
+    const matches = available.filter(model => `${model.name} ${model.id} ${model.provider}`.toLowerCase().includes(query));
     for (const model of matches) {
       const button = document.createElement('button');
       button.type = 'button';
@@ -40,11 +44,32 @@ export function setupModelPicker({dialog, search, list, status, retry, loadModel
       retry.hidden = false;
     }
   }
+  function selectTab(value) {
+    tab = value;
+    latestTab.setAttribute('aria-selected', String(tab === 'latest'));
+    allTab.setAttribute('aria-selected', String(tab === 'all'));
+    latestTab.tabIndex = tab === 'latest' ? 0 : -1;
+    allTab.tabIndex = tab === 'all' ? 0 : -1;
+    list.setAttribute('aria-labelledby', tab === 'latest' ? latestTab.id : allTab.id);
+    render();
+  }
+  latestTab.addEventListener('click', () => selectTab('latest'));
+  allTab.addEventListener('click', () => selectTab('all'));
+  function tabKey(event) {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    event.preventDefault();
+    const next = event.key === 'Home' ? 'latest' : event.key === 'End' ? 'all' : tab === 'latest' ? 'all' : 'latest';
+    selectTab(next);
+    (next === 'latest' ? latestTab : allTab).focus();
+  }
+  latestTab.addEventListener('keydown', tabKey);
+  allTab.addEventListener('keydown', tabKey);
   search.addEventListener('input', render);
   retry.addEventListener('click', load);
   return {
     open(query = '') {
       search.value = query;
+      selectTab('latest');
       if (!dialog.open) dialog.showModal();
       search.focus();
       return load();

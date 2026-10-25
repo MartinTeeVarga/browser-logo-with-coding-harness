@@ -1,3 +1,4 @@
+import { throwIfAborted, waitForResult } from './cancellation.js';
 import { dialectPromptGuide } from './logo/dialect.js';
 
 export const MAX_REPAIRS = 3;
@@ -73,7 +74,7 @@ export function repairCode({ diagnostic, failedSnapshot, ...options }) {
 
 // The only model-directed mutation is editor replacement. Validate source
 // before committing at the same revision; candidates are never executed here.
-export async function replaceCode({ request, history = [], readEditor, commit, generate, validate, prompt, onStatus = () => {}, onAttempt = () => {}, maxAttempts = MAX_REPAIRS + 1, diagnostic = null, expectedSnapshot = null, repairing = false }) {
+export async function replaceCode({ request, history = [], readEditor, commit, generate, validate, prompt, onStatus = () => {}, onAttempt = () => {}, maxAttempts = MAX_REPAIRS + 1, diagnostic = null, expectedSnapshot = null, repairing = false, signal = null }) {
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > MAX_REPAIRS + 1) throw new HarnessError('Invalid repair attempt limit.', 'repair_limit');
   const snapshot = expectedSnapshot || readEditor();
   function assertUnchanged() {
@@ -87,10 +88,12 @@ export async function replaceCode({ request, history = [], readEditor, commit, g
   ];
   let validationError = '', requireCode = repairing;
   for (let attempt = 0; attempt < maxAttempts; ++attempt) {
+    throwIfAborted(signal);
     assertUnchanged();
     onStatus(repairing ? `Repairing the Logo code… ${attempt + 1}/${maxAttempts}` : attempt ? `Repairing the Logo response… ${attempt}/${MAX_REPAIRS}` : 'Thinking about Logo…');
     onAttempt();
-    const candidate = await generate(messages);
+    const candidate = await waitForResult(generate(messages), signal);
+    throwIfAborted(signal);
     let parsed;
     try {
       if (typeof candidate === 'string' && /```|~~~/.test(candidate)) requireCode = true;
@@ -101,8 +104,10 @@ export async function replaceCode({ request, history = [], readEditor, commit, g
       }
       onStatus('Checking the Logo code…');
       if (repairing && parsed.source.trim() === snapshot.source.trim()) throw new Error('This is the unchanged program that failed. Correct the reported interpreter error.');
-      await validate(parsed.source);
+      await waitForResult(validate(parsed.source), signal);
     } catch (error) {
+      throwIfAborted(signal);
+      if (error.name === 'AbortError') throw error;
       if (error.code === 'RESOURCE_LIMIT') throw error;
       validationError = error.message || 'Invalid Logo source.';
       if (attempt === maxAttempts - 1) break;
@@ -113,6 +118,7 @@ export async function replaceCode({ request, history = [], readEditor, commit, g
       continue;
     }
     // Check immediately before the synchronous editor transaction.
+    throwIfAborted(signal);
     assertUnchanged();
     commit(parsed.source);
     return { source: parsed.source, reply: parsed.reply, response: candidate, repairs: attempt };

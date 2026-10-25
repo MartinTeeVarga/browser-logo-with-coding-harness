@@ -65,11 +65,15 @@
     </main>
     <dialog id="model-dialog" class="app-dialog model-dialog" aria-labelledby="model-title">
       <header><h2 id="model-title">Choose a model</h2><button type="button" class="dialog-close" data-close="model-dialog" aria-label="Close model chooser">×</button></header>
+      <div class="model-tabs" role="tablist" aria-label="Model catalog">
+        <button type="button" id="models-latest-tab" role="tab" aria-selected="true" aria-controls="model-list">Latest</button>
+        <button type="button" id="models-all-tab" role="tab" aria-selected="false" aria-controls="model-list" tabindex="-1">All</button>
+      </div>
       <label class="sr-only" for="model-search">Search models</label><input id="model-search" class="model-search" type="search" placeholder="Search models or providers…" autocomplete="off">
       <p class="price-guide">$ cheap · $$ reasonable · $$$ expensive</p>
       <p class="price-details">Bands compare 1M input + 1M output tokens: $ up to $2, $$ up to $15, $$$ above $15. Actual cost depends on usage. ? means pricing unavailable.</p>
       <p id="model-status" role="status"></p><button id="model-retry" type="button" hidden>Try again</button>
-      <div id="model-list" class="model-list" role="group" aria-label="Available Puter models"></div>
+      <div id="model-list" class="model-list" role="tabpanel" aria-labelledby="models-latest-tab"></div>
     </dialog>
     <dialog id="about-dialog" class="app-dialog" aria-labelledby="about-title">
       <header><h2 id="about-title">About Logo</h2><button type="button" class="dialog-close" data-close="about-dialog" aria-label="Close About">×</button></header>

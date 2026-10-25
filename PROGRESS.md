@@ -205,3 +205,11 @@ Provider research references (2026-10-23):
 - Added the supplied USS Enterprise NCC-1701 top-view program unchanged to Examples. It uses the shared loader, validates before insertion, supports undo, and waits for Run.
 - Included the pending direct GitHub menu link in the requested commit/push.
 - Verification: all 172 automated tests pass, including validation and actual turtle execution of Enterprise within canvas bounds. Static build succeeds and packages the example.
+
+## AI Stop control and Latest/All model tabs (2026-10-25)
+
+- Send becomes a square Stop button during chat, connection, and runtime repair, then returns to Send. Cancellation flows through the provider adapter, harness, and validation worker. The app stops waiting even if an SDK ignores the signal; late results cannot modify code or create more repair calls. Existing editor text and new composer drafts are preserved. Pressing Enter in a busy composer does not accidentally cancel.
+- Added keyboard-accessible Latest/All tabs to `/model`, defaulting to Latest each time it opens. The explicit family list was checked against the live public catalog and includes GPT-6/6.1, latest Claude tiers, Gemini tiers, Mistral tiers/Devstral, Grok, DeepSeek, and Kimi K3/K3.1. Catalog routes/aliases/variants remain live; All retains every model. This is a current-family shortlist, not a claim of evaluated Logo quality or automatic future-version detection.
+- Puter documents AbortSignal support, but already-started model work can still be billed. Recorded that limitation in README. No paid model calls or caching changes were made.
+- Verification: all 181 tests pass and static build succeeds. Added cancellation/late-result/auth/validation/runtime-repair coverage, request reuse after Stop, family inclusion/exclusion, and model tab/search/keyboard/default behavior. Live browser visual review and provider billing cancellation were not exercised.
+- Documentation review before delivery: clarified Latest-list maintenance in `src/models.js`, linked provider cancellation behavior, and recorded both requirements in the confirmed plan.

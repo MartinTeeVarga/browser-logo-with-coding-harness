@@ -57,3 +57,19 @@ test('live pricing preserves zero rates and does not mistake cache rates for ord
   assert.equal(normalizeModels([make(300,1500)])[0].pricing.band,'$$$');
   assert.equal(normalizeModels([make(undefined,1500)])[0].pricing.band,'?');
 });
+
+test('Latest includes current requested families and Kimi across provider routes and variants', async () => {
+  const {isLatestModel}=await import('../src/models.js');
+  for (const id of [
+    'gpt-6-luna','openai/gpt-6-astra-pro','infron:openai/gpt-6.1-sol:flex',
+    'claude-opus-5-5','anthropic/claude-sonnet-5.5','claude-haiku-5-5','claude-fable-5-1',
+    'google/gemini-4-argon','gemini-3.8-flash','gemini-3.5-flash-lite','gemini-3.1-pro-preview',
+    'mistral-large-4','mistral-medium-2604','mistral-small-2603','openrouter:mistralai/devstral-2512',
+    'x-ai/grok-4.7','deepseek/deepseek-v4.1-flash-1017','deepseek-v4-pro-0813',
+    'kimi-k3','moonshotai/kimi-k3.1-pro','infron:moonshotai/kimi-k3:priority'
+  ]) assert.equal(isLatestModel({id}),true,id);
+  for (const id of ['gpt-5.6-sol','gpt-6.2-sol','claude-sonnet-5','claude-opus-4-8','gemini-2.5-pro','mistral-small-creative','grok-4.6','kimi-k2.7-code','sao10k/l3.3-70b-euryale-v2.3']) {
+    assert.equal(isLatestModel({id}),false,id);
+  }
+  assert.equal(isLatestModel({id:'opaque-route',aliases:['google/gemini-4-argon']}),true);
+});

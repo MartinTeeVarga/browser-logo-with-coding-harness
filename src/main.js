@@ -137,6 +137,7 @@ const modelPicker = setupModelPicker({
     selectedModel = model;
     save('logo.model.v1', JSON.stringify({id:model.id, name:model.name, maxTokens:model.maxTokens}));
     renderAccountStatus();
+    updateRepairLink();
   }
 });
 for (const name of ['model', 'about', 'examples']) {
@@ -195,45 +196,59 @@ function setChatBusy(value, isRuntimeRepair = false) {
   icon.setAttribute('fill', value ? 'currentColor' : 'none');
   icon.setAttribute('stroke', value ? 'none' : 'currentColor');
   $('run').disabled = repairingRun;
+  $('repair-fix').disabled = value;
   document.body.classList.toggle('is-busy', value);
   if (!value) $('chat-status').textContent = '';
 }
 $('send').addEventListener('click', event => {
   if (!chatting) return;
   event.preventDefault();
-  pendingRunFailure = null;
+  dismissRunRepair();
   chatController.abort(stoppedError());
 });
-function queueRunRepair(snapshot, diagnostic) {
+function dismissRunRepair() {
+  pendingRunFailure = null;
+  $('repair-fix').hidden = true;
+}
+function updateRepairLink() {
+  $('repair-fix').title = `Fix code using ${selectedModel.name}`;
+  $('repair-fix').setAttribute('aria-label', `Fix code using ${selectedModel.name}`);
+}
+function offerRunRepair(snapshot, diagnostic) {
   if (revision !== snapshot.revision || editor.getValue() !== snapshot.source) {
     bubble('The program failed, but you have edited the code since Run. Your changes are safe. Run the current code to check it.');
     return;
   }
-  pendingRunFailure = { snapshot, diagnostic };
-  void repairPendingRun();
-}
-async function repairPendingRun() {
-  if (!pendingRunFailure || chatting || running) return;
-  const { snapshot, diagnostic } = pendingRunFailure;
-  pendingRunFailure = null;
-  if (revision !== snapshot.revision || editor.getValue() !== snapshot.source) return;
   if (!runtimeRepairBudget.remaining) {
-    bubble('Automatic repair stopped after three attempts. Your code is preserved; describe the problem in chat to continue.', 'assistant error');
+    bubble('Repair stopped after three attempts. Your code is preserved; describe the problem in chat to continue.', 'assistant error');
     return;
   }
-  // A worker callback is not a user gesture: never open a login popup here.
-  if (!globalThis.puter?.auth?.isSignedIn?.()) {
-    bubble('The program failed. Send a message in chat to connect Puter and repair the code.', 'assistant error');
+  pendingRunFailure = { snapshot, diagnostic };
+  updateRepairLink();
+  $('repair-fix').hidden = false;
+  $('repair-fix').disabled = chatting;
+}
+async function repairAfterConsent() {
+  if (!pendingRunFailure || chatting || running) return;
+  const { snapshot, diagnostic } = pendingRunFailure;
+  dismissRunRepair();
+  if (revision !== snapshot.revision || editor.getValue() !== snapshot.source) return;
+  if (!runtimeRepairBudget.remaining) {
+    bubble('Repair stopped after three attempts. Your code is preserved; describe the problem in chat to continue.', 'assistant error');
     return;
   }
   setChatBusy(true, true);
   const signal = chatController.signal;
+  const generateRepair = modelGenerator(signal);
   bubble(`The interpreter reported “${diagnostic.message}”${diagnostic.procedure ? ` in ${diagnostic.procedure}` : ''}. Repairing the code…`);
   try {
+    // Approval is a user gesture, so authentication can open here if needed.
+    await waitForResult(connectPuter(), signal);
+    throwIfAborted(signal);
     const result = await repairCode({
       diagnostic, failedSnapshot: snapshot, history, prompt: basePrompt(names),
       readEditor, commit: source => commitSource(source, 'ai-repair'),
-      signal, generate:modelGenerator(signal), validate:source => validateInWorker(source, signal),
+      signal, generate:generateRepair, validate:source => validateInWorker(source, signal),
       maxAttempts: runtimeRepairBudget.remaining,
       onAttempt: () => runtimeRepairBudget.use(),
       onStatus: message => { $('chat-status').textContent = message; }
@@ -252,9 +267,10 @@ async function repairPendingRun() {
   } finally {
     setChatBusy(false);
     void refreshAllowance();
-    void repairPendingRun();
   }
 }
+$('repair-fix').addEventListener('click', repairAfterConsent);
+dismissRunRepair();
 let allowanceRequest = 0;
 async function refreshAllowance() {
   const request = ++allowanceRequest;
@@ -284,8 +300,9 @@ window.addEventListener('focus', () => { void refreshAllowance(); });
 editor.on('change', (_, change) => {
   clearExecutionLine();
   revision++; save('logo.source.v1', editor.getValue());
+  dismissRunRepair();
   if (change.origin !== 'ai-repair') {
-    runtimeRepairBudget.reset(); pendingRunFailure = null;
+    runtimeRepairBudget.reset();
   }
 });
 function setCollapsed(collapsed) {
@@ -326,7 +343,8 @@ function validateInWorker(source, signal = null) {
 }
 
 function status(message, error = false) {
-  $('run-status').textContent = message;
+  $('run-message').textContent = message;
+  $('run-status').hidden = !message;
   $('run-status').classList.toggle('error', error);
 }
 function finishRun(message, error = false) {
@@ -347,7 +365,8 @@ function armWatchdog() {
   }, 15000);
 }
 async function run() {
-  if (running) { pendingRunFailure = null; finishRun('Stopped.'); return; }
+  dismissRunRepair();
+  if (running) { finishRun('Stopped.'); return; }
   if (repairingRun) return;
   if (!globalThis.OffscreenCanvas) { status('This browser needs OffscreenCanvas support. Try a recent browser.', true); return; }
   const snapshot = readEditor();
@@ -398,10 +417,10 @@ async function run() {
       $('program-prompt').textContent = data.prompt || 'Input';
       $('program-input').hidden = false; $('program-answer').focus();
     } else if (data.type === 'done') {
-      runtimeRepairBudget.reset(); pendingRunFailure = null; finishRun('');
+      runtimeRepairBudget.reset(); finishRun('');
     } else if (data.type === 'error') {
       finishRun(data.procedure ? `${data.procedure}: ${data.message}` : data.message, true);
-      if (data.repairable && data.code !== 'RESOURCE_LIMIT') queueRunRepair(snapshot, { message: data.message, procedure: data.procedure, code: data.code, phase: data.phase, line: data.line });
+      if (data.repairable && data.code !== 'RESOURCE_LIMIT') offerRunRepair(snapshot, { message: data.message, procedure: data.procedure, code: data.code, phase: data.phase, line: data.line });
     }
   };
   worker.onerror = () => finishRun('The drawing worker could not start. Refresh the page and try again.', true);
@@ -492,7 +511,6 @@ $('composer').addEventListener('submit', async event => {
     // Includes validation repairs and failed requests that may have consumed
     // model usage. Usage failures never turn a successful edit into an error.
     void refreshAllowance();
-    void repairPendingRun();
   }
 });
 

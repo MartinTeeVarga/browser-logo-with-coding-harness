@@ -36,7 +36,7 @@
             </label>
             <button class="run-button" id="run" type="button"><svg width="13" height="14" viewBox="0 0 13 14" aria-hidden="true"><path d="M2 1.5 11 7l-9 5.5z" fill="currentColor"/></svg><span>Run</span></button>
           </div>
-          <div class="run-status" id="run-status" role="status" aria-live="polite"></div>
+          <div class="run-status" id="run-status" role="status" aria-live="polite" hidden><span id="run-message"></span> <button class="repair-link" id="repair-fix" type="button" hidden>fix</button></div>
         </div>
         <pre class="output" id="output" aria-label="Program output" aria-live="polite" hidden></pre>
         <form class="program-input" id="program-input" hidden>

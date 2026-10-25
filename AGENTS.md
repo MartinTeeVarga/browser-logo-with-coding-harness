@@ -36,7 +36,7 @@ The original task and agreed plan are in [PLAN.md](PLAN.md). Keep [PROGRESS.md](
 - The harness may read the current code snapshot and replace editor code. It has no execution, filesystem, network, or browser tools available to the model.
 - Validate before applying. After the initial response, allow up to three repair attempts with diagnostics. On failure, preserve code and report the failure in chat.
 - Preserve user edits made during generation. Commit validated changes atomically and make them undoable.
-- After an explicit Run reports a program error, automatically submit the failed source and interpreter diagnostic for repair when already signed in. Share a three-call budget across runtime repair attempts for that program. Repaired code still waits for an explicit Run; do not automatically execute it or open a background authentication popup.
+- Never automatically repair pasted or manually edited code. After Run reports a program error, offer a lowercase `fix` action styled as a link inside the error message; send source/diagnostics only after it is clicked. Use the model selected at approval for all attempts; authentication may start from that click. Dismiss stale offers on editor changes or another Run. Share a three-call budget across runtime repairs for that program. Validated corrections remain undoable and wait for an explicit Run. Automatic validation retries for user-requested chat updates remain allowed.
 - Read Puter allowance only for an already authenticated account. Do not trigger login just to display usage. Usage lookup failure must not break chat or appear as a zero balance.
 
 ## Development and delivery

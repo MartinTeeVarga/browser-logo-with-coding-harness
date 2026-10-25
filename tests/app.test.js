@@ -90,15 +90,19 @@ async function settled(predicate) {
 }
 const failure = {type:'error',message:'Expected number',procedure:'FD',phase:'execution',line:2,code:4,repairable:true};
 
-test('a Run error automatically repairs the editor without starting another Run', async t => {
+test('a Run error offers an inline fix action and approved code still waits for Run', async t => {
   const state = await app(t);
   await state.get('run').emit('click');
   state.drawing().emit(failure);
+  assert.equal(state.requests.length,0);
+  assert.equal(state.get('repair-fix').hidden,false);
+  assert.match(state.get('repair-fix').title,/GPT-6 Luna/);
+  await state.get('repair-fix').emit('click');
   await settled(()=>state.source()==='fd 20'&&!state.get('send').disabled);
   assert.equal(state.requests.length,1);
   assert.match(state.requests[0].at(-1).content,/Expected number/);
   assert.equal(state.workers.filter(w=>w.url.includes('draw.worker')).length,1);
-  assert.match(state.get('run-status').textContent,/Press Run/);
+  assert.match(state.get('run-message').textContent,/Press Run/);
 });
 
 test('an error from an older Run never overwrites user edits', async t => {
@@ -162,7 +166,7 @@ test('page enforces cumulative output across clears before touching the DOM', as
   worker.emit({type:'output',value:'x'.repeat(16000)});
   assert.equal(state.get('output').textContent, '');
   assert.equal(worker.terminated, true);
-  assert.match(state.get('run-status').textContent, /output exceeded/);
+  assert.match(state.get('run-message').textContent, /output exceeded/);
   assert.equal(state.requests.length, 0);
 });
 
@@ -172,7 +176,7 @@ test('page stops clear-message floods and creates a fresh budget for the next Ru
   const worker = state.drawing();
   for (let i = 0; i < 1001; i++) worker.emit({type:'clear-output'});
   assert.equal(worker.terminated, true);
-  assert.match(state.get('run-status').textContent, /message limit/);
+  assert.match(state.get('run-message').textContent, /message limit/);
   await state.get('run').emit('click');
   state.drawing().emit({type:'output',value:'hello'});
   assert.equal(state.get('output').textContent, 'hello');
@@ -184,7 +188,7 @@ test('resource failures never trigger AI repair even if a worker marks them repa
   await state.get('run').emit('click');
   state.drawing().emit({...failure,code:'RESOURCE_LIMIT',message:'Allocation limit reached.'});
   assert.equal(state.requests.length, 0);
-  assert.match(state.get('run-status').textContent, /Allocation/);
+  assert.match(state.get('run-message').textContent, /Allocation/);
 });
 
 test('/model opens a live searchable chooser without an AI request and applies selection', async t => {
@@ -333,19 +337,86 @@ test('model tabs default to Latest, search within each list, and reopen on Lates
   assert.equal(state.requests.length,0);
 });
 
-test('Stop cancels automatic runtime repair without applying its late result or restarting repair', async t => {
+test('Stop cancels approved runtime repair without applying its late result or restarting repair', async t => {
   let resolve;
   const state=await app(t, ()=>new Promise(done=>{resolve=done;}));
   const original=state.source();
   await state.get('run').emit('click');
   state.drawing().emit(failure);
+  const repairing=state.get('repair-fix').emit('click');
   await settled(()=>state.requests.length===1);
   assert.equal(state.get('run').disabled,true);
   state.get('send').emit('click');
   await settled(()=>state.get('send').type==='submit');
   assert.equal(state.get('run').disabled,false);
+  await repairing;
   resolve(logoReply('fd 99'));
   await new Promise(done=>setImmediate(done));
   assert.equal(state.source(),original);
   assert.equal(state.requests.length,1);
+});
+
+
+test('pasting code and ignoring fix never connects or calls a model', async t => {
+  let connections=0;
+  const state=await app(t, undefined, {connectPuter:()=>{connections++;return Promise.resolve();}});
+  state.edit('fd "oops');
+  assert.equal(state.requests.length,0);
+  assert.equal(state.workers.length,0);
+  await state.get('run').emit('click');
+  state.drawing().emit(failure);
+  assert.equal(connections,0);
+  await new Promise(done=>setImmediate(done));
+  assert.equal(state.get('repair-fix').hidden,false);
+  assert.equal(state.source(),'fd "oops');
+  assert.equal(connections,0);
+  assert.equal(state.requests.length,0);
+});
+
+test('editing after an error dismisses the stale repair offer', async t => {
+  const state=await app(t);
+  await state.get('run').emit('click');state.drawing().emit(failure);
+  state.edit('fd 77');
+  assert.equal(state.get('repair-fix').hidden,true);
+  await state.get('repair-fix').emit('click');
+  assert.equal(state.requests.length,0);
+  assert.equal(state.source(),'fd 77');
+});
+
+test('repair uses the model selected at approval and connects only after approval', async t => {
+  let connections=0;
+  const state=await app(t, undefined, {connectPuter:()=>{connections++;return Promise.resolve();}});
+  await state.get('run').emit('click');state.drawing().emit(failure);
+  state.get('message').value='/model Claude';await state.get('composer').emit('submit');
+  await settled(()=>state.get('model-list').children.length===1);
+  state.get('model-list').children[0].emit('click');
+  assert.match(state.get('repair-fix').title,/Claude Test/);
+  assert.equal(connections,0);
+  await state.get('repair-fix').emit('click');
+  assert.equal(connections,1);
+  assert.equal(state.modelsUsed[0].model,'anthropic/claude-sonnet-5-5');
+  assert.equal(state.source(),'fd 20');
+});
+
+test('each failed rerun needs fresh approval and keeps the shared repair budget', async t => {
+  let calls=0;
+  const state=await app(t, async()=>logoReply(`fd ${++calls}`));
+  for(let i=0;i<3;i++) {
+    await state.get('run').emit('click');state.drawing().emit(failure);
+    assert.equal(state.requests.length,i);
+    assert.equal(state.get('repair-fix').hidden,false);
+    await state.get('repair-fix').emit('click');
+  }
+  await state.get('run').emit('click');state.drawing().emit(failure);
+  assert.equal(state.get('repair-fix').hidden,true);
+  assert.equal(state.requests.length,3);
+});
+
+test('starting a fresh Run dismisses the previous repair question', async t => {
+  const state=await app(t);
+  await state.get('run').emit('click');state.drawing().emit(failure);
+  await state.get('run').emit('click');
+  assert.equal(state.get('repair-fix').hidden,true);
+  await state.get('repair-fix').emit('click');
+  assert.equal(state.requests.length,0);
 });

@@ -18,6 +18,8 @@ The initial provider proposal was Gemini with a free tier and browser sign-in. T
 
 ## Confirmed decisions and later requirements
 
+- Pasted/manual code must never be repaired automatically. Run errors show a lowercase `fix` link inside the error message; clicking it uses the currently selected model, validates the correction, and leaves execution to Run. Dismiss stale offers on edits or another Run.
+
 - Use **Berkeley Logo**, excluding native OS, filesystem, hardware, and desktop integration features. Full non-native conformance remains the goal; do not silently reduce this to turtle-only Logo.
 - Use **Puter.js** so each user authorizes their own account and consumes their own allowance. No shared application quota, backend proxy, or manually copied API keys.
 - Default to **GPT-6 Luna**, currently `openai/gpt-6-luna`. The `/model` slash command opens a live Puter chat-model chooser, with reported-price $/$$/$$$ bands and saved selection shown before the allowance. No silent fallback.
@@ -29,7 +31,7 @@ The initial provider proposal was Gemini with a free tier and browser sign-in. T
 - Keep the design friendly and simple. Anchor the canvas at the left; in landscape, code and chat fill all horizontal space remaining beside the square canvas.
 - The initial canvas message says **“Press Run to try the code.”**
 - Display the user's remaining Puter allowance when the API makes it available. Show unavailable status rather than inventing a balance, and keep chat usable if the lookup fails.
-- Automatically repair interpreter errors reported after Run: submit the failed program and diagnostic, validate the response, preserve newer edits, and keep repaired execution manual.
+- Repair interpreter errors only after explicit approval: submit the failed program and diagnostic using the selected model, validate the response, preserve newer edits, and keep repaired execution manual.
 - Provide a Slow / Fast / Instant speed slider. Slow retains the original pacing; Fast uses ten times shorter animation delays. Animated modes use a turtle as the moving pen, with source-line highlighting/autoscroll and current pen color. Run changes its triangle to a square while executing. The welcome invites drawings and Logo questions.
 - Allow Logo-focused conversation with optional explanations. Exactly one fenced `logo` block supplies a complete editor replacement; prose-only answers leave the editor unchanged. Validate extracted code, reject foreign/ambiguous code blocks, and steer unrelated chat back to Logo. This supersedes the original source-only response contract.
 - Keep a local Git repository and commit the work. Store these requirements and established agent rules in the project.

@@ -56,7 +56,7 @@ export class RuntimeRepairBudget {
   get remaining() { return Math.max(0, MAX_REPAIRS - this.used); }
   reset() { this.used = 0; }
   use() {
-    if (!this.remaining) throw new HarnessError('Automatic repair stopped after three attempts. Your code is preserved; describe the problem in chat to continue.', 'repair_limit');
+    if (!this.remaining) throw new HarnessError('Repair stopped after three attempts. Your code is preserved; describe the problem in chat to continue.', 'repair_limit');
     this.used++;
   }
 }

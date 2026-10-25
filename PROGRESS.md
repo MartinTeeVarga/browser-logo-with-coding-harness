@@ -213,3 +213,16 @@ Provider research references (2026-10-23):
 - Puter documents AbortSignal support, but already-started model work can still be billed. Recorded that limitation in README. No paid model calls or caching changes were made.
 - Verification: all 181 tests pass and static build succeeds. Added cancellation/late-result/auth/validation/runtime-repair coverage, request reuse after Stop, family inclusion/exclusion, and model tab/search/keyboard/default behavior. Live browser visual review and provider billing cancellation were not exercised.
 - Documentation review before delivery: clarified Latest-list maintenance in `src/models.js`, linked provider cancellation behavior, and recorded both requirements in the confirmed plan.
+
+## Explicit approval for Run-error repairs (2026-10-25)
+
+- Pasting/editing code no longer leads to automatic runtime repair. A Run program error shows “Repair this code with [selected model]?” with Repair / Not now. No source is submitted and no authentication starts until Repair is clicked. Pasting alone does not execute or validate the program; errors are detected on Run.
+- Approval captures the current selected model, connects Puter if needed, and uses the existing bounded validation/repair harness. Corrected code remains undoable and waits for Run. Each failed rerun requires fresh approval, sharing the existing three-call budget. Requested chat updates retain automatic validation retries.
+- Edits and new Runs dismiss stale questions. Decline, cancellation, resource errors, and worker failures do not start repair requests; late replies cannot overwrite user code. Updated AGENTS.md, README, and the confirmed plan.
+- Verification: all 186 tests pass and the static build succeeds. Added app-event coverage for approval, decline/no authentication, model changes before approval, stale offers, per-rerun consent, shared limits, and approved-repair cancellation. Tests use DOM/editor/provider adapters; live browser/Puter verification was not performed.
+
+## Inline error repair action (2026-10-25)
+
+- Replaced the separate Repair / Not now panel with a lowercase “fix” action, styled as an underlined link inside the interpreter error message. It is a keyboard-accessible button because it starts a repair rather than navigating. Its tooltip/accessibility label identifies the selected model.
+- Clicking fix remains explicit approval; leaving it alone makes no request. Existing stale-code guards, selected-model capture, cancellation, validation, and manual execution remain in place. Updated the current rules, plan, and README.
+- Verification: all 186 tests pass and the static build succeeds. App-event tests exercise the inline action, ignoring it, model selection, and dismissal. No live browser/provider verification performed.
